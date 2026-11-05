@@ -180,11 +180,7 @@ local function GetCleanText(segments)
 end
 
 local function BuildButtonContent(segments, Parent, ZIndex)
-    local cleanText = ''
-    for _, seg in next, segments do
-        if seg.type == 'text' then cleanText = cleanText .. seg.value end
-    end
-    
+    local cleanText = GetCleanText(segments)
     local richText = ParseRichText(cleanText)
     
     local firstLabel = QuorumLib:CreateLabel({
@@ -950,7 +946,6 @@ do
                 pcall(setclipboard, table.concat({ math.floor(ColorPicker.Value.R * 255), math.floor(ColorPicker.Value.G * 255), math.floor(ColorPicker.Value.B * 255) }, ', '))
                 QuorumLib:Notify('Copied RGB values to clipboard!', 2)
             end)
-
         end
 
         QuorumLib:AddToRegistry(PickerFrameInner, { BackgroundColor3 = 'BackgroundColor'; BorderColor3 = 'OutlineColor'; });
