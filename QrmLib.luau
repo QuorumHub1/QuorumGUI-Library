@@ -223,45 +223,63 @@ function QuorumLib:CreateLabel(Properties, IsHud)
 end;
 
 function QuorumLib:MakeDraggable(Instance, Cutoff)
-    Instance.Active = true;
+    Instance.Active = true
+
+    local Dragging = false
+    local DragInput
+    local DragStart
+    local StartPosition
 
     Instance.InputBegan:Connect(function(Input)
-        if not IsPrimaryPress(Input) then return end
-        if Instance.Active == false then return end
+        if not IsPrimaryPress(Input) then
+            return
+        end
 
-        local StartPos = GetInputPosition(Input)
-        local ObjPos = Vector2.new(
-            StartPos.X - Instance.AbsolutePosition.X,
-            StartPos.Y - Instance.AbsolutePosition.Y
-        );
+        if not Instance.Active then
+            return
+        end
 
-        if ObjPos.Y > (Cutoff or 40) then
-            return;
-        end;
+        local MousePosition = GetInputPosition(Input)
+        local RelativePosition = MousePosition - Instance.AbsolutePosition
 
-        local Dragging = true;
+        if RelativePosition.Y > (Cutoff or 40) then
+            return
+        end
 
-        local EndConn
-        EndConn = InputService.InputEnded:Connect(function(EndInput)
-            if EndInput.UserInputType == Enum.UserInputType.MouseButton1
-                or EndInput.UserInputType == Enum.UserInputType.Touch then
-                Dragging = false;
-                if EndConn then EndConn:Disconnect() end
+        Dragging = true
+        DragStart = MousePosition
+        StartPosition = Instance.Position
+
+        InputService.InputChanged:Connect(function(ChangeInput)
+            if ChangeInput.UserInputType == Enum.UserInputType.MouseMovement
+                or ChangeInput.UserInputType == Enum.UserInputType.Touch then
+                DragInput = ChangeInput
             end
-        end);
+        end)
+    end)
 
-        task.spawn(function()
-            while Dragging do
-                local Cur = GetCursorPosition()
-                Instance.Position = UDim2.new(
-                    0,
-                    Cur.X - ObjPos.X + (Instance.Size.X.Offset * Instance.AnchorPoint.X),
-                    0,
-                    Cur.Y - ObjPos.Y + (Instance.Size.Y.Offset * Instance.AnchorPoint.Y)
-                );
-                RenderStepped:Wait();
-            end;
-        end);
+    InputService.InputChanged:Connect(function(Input)
+        if Dragging and (
+            Input.UserInputType == Enum.UserInputType.MouseMovement
+            or Input.UserInputType == Enum.UserInputType.Touch
+        ) then
+            local Delta = GetInputPosition(Input) - DragStart
+
+            Instance.Position = UDim2.new(
+                StartPosition.X.Scale,
+                StartPosition.X.Offset + Delta.X,
+                StartPosition.Y.Scale,
+                StartPosition.Y.Offset + Delta.Y
+            )
+        end
+    end)
+
+    InputService.InputEnded:Connect(function(Input)
+        if Input.UserInputType == Enum.UserInputType.MouseButton1
+            or Input.UserInputType == Enum.UserInputType.Touch then
+            Dragging = false
+            DragInput = nil
+        end
     end)
 end;
 
