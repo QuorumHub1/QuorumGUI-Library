@@ -1540,55 +1540,64 @@ do
 
         local segments = ParseSegments(Text)
         local cleanText = GetCleanText(segments)
+        local iconCount = CountValidIcons(segments)
 
         local Row = QuorumLib:Create('Frame', {
             BackgroundTransparency = 1;
-            Size = UDim2.new(1, -4, 0, DoesWrap and 0 or 15);
-            AutomaticSize = DoesWrap and Enum.AutomaticSize.Y or Enum.AutomaticSize.None;
+            Size = UDim2.new(1, -4, 0, 15);
             ZIndex = 5;
             Parent = Container;
         });
 
         if DoesWrap then
-            QuorumLib:Create('UIListLayout', {
-                Padding = UDim.new(0, 4);
-                FillDirection = Enum.FillDirection.Vertical;
-                VerticalAlignment = Enum.VerticalAlignment.Top;
-                HorizontalAlignment = Enum.HorizontalAlignment.Left;
-                SortOrder = Enum.SortOrder.LayoutOrder;
+            Row.Size = UDim2.new(1, -4, 0, 0)
+            Row.AutomaticSize = Enum.AutomaticSize.Y
+
+            local IconRow = QuorumLib:Create('Frame', {
+                BackgroundTransparency = 1;
+                Size = UDim2.new(1, 0, 0, 15);
+                ZIndex = 5;
                 Parent = Row;
             });
-            local iconSegments = {}
-            for _, seg in next, segments do
-                if seg.type == 'icon' then table.insert(iconSegments, seg) end
-            end
+            QuorumLib:Create('UIListLayout', {
+                Padding = UDim.new(0, 4);
+                FillDirection = Enum.FillDirection.Horizontal;
+                VerticalAlignment = Enum.VerticalAlignment.Center;
+                SortOrder = Enum.SortOrder.LayoutOrder;
+                Parent = IconRow;
+            });
             local idx = 0
-            for _, seg in next, iconSegments do
-                idx = idx + 1
-                local asset = GetLucideAsset(seg.value)
-                if asset then
-                    QuorumLib:Create('ImageLabel', {
-                        BackgroundTransparency = 1;
-                        Size = UDim2.new(0, 14, 0, 14);
-                        Image = 'rbxassetid://' .. asset.id;
-                        ImageRectOffset = asset.imageRectOffset;
-                        ImageRectSize = asset.imageRectSize;
-                        ImageColor3 = QuorumLib.FontColor;
-                        LayoutOrder = idx;
-                        ZIndex = 5;
-                        Parent = Row;
-                    });
+            local iconAdded = false
+            for _, seg in next, segments do
+                if seg.type == 'icon' then
+                    local asset = GetLucideAsset(seg.value)
+                    if asset then
+                        idx = idx + 1
+                        QuorumLib:Create('ImageLabel', {
+                            BackgroundTransparency = 1;
+                            Size = UDim2.new(0, 14, 0, 14);
+                            Image = 'rbxassetid://' .. asset.id;
+                            ImageRectOffset = asset.imageRectOffset;
+                            ImageRectSize = asset.imageRectSize;
+                            ImageColor3 = QuorumLib.FontColor;
+                            LayoutOrder = idx;
+                            ZIndex = 5;
+                            Parent = IconRow;
+                        });
+                        iconAdded = true
+                    end
                 end
             end
+            if not iconAdded then IconRow.Visible = false; IconRow.Size = UDim2.new(1, 0, 0, 0) end
+
             local lbl = QuorumLib:CreateLabel({
                 Size = UDim2.new(1, 0, 0, 15);
-                AutomaticSize = Enum.AutomaticSize.Y;
+                Position = UDim2.new(0, 0, 0, iconAdded and 19 or 0);
                 TextSize = 14;
                 Text = cleanText;
                 TextWrapped = true;
                 TextXAlignment = Enum.TextXAlignment.Left;
                 TextYAlignment = Enum.TextYAlignment.Top;
-                LayoutOrder = 999;
                 ZIndex = 5;
                 Parent = Row;
             });
@@ -1605,14 +1614,15 @@ do
 
         function Label:SetText(NewText)
             for _, child in next, Row:GetChildren() do
-                if child:IsA('TextLabel') or child:IsA('ImageLabel') then child:Destroy() end
+                if child:IsA('TextLabel') or child:IsA('ImageLabel') or (child:IsA('Frame') and child.Name == 'IconRow') then
+                    child:Destroy()
+                end
             end
             local segs = ParseSegments(NewText)
             if DoesWrap then
                 local newClean = GetCleanText(segs)
                 local lbl = QuorumLib:CreateLabel({
                     Size = UDim2.new(1, 0, 0, 15);
-                    AutomaticSize = Enum.AutomaticSize.Y;
                     TextSize = 14;
                     Text = newClean;
                     TextWrapped = true;
@@ -3284,7 +3294,11 @@ function QuorumLib:CreateWindow(...)
                 local Size = 0;
                 for _, Element in next, Groupbox.Container:GetChildren() do
                     if (not Element:IsA('UIListLayout')) and Element.Visible then
-                        Size = Size + Element.Size.Y.Offset;
+                        local h = Element.Size.Y.Offset
+                        if Element.AutomaticSize == Enum.AutomaticSize.Y or Element.AutomaticSize == Enum.AutomaticSize.XY then
+                            if Element.AbsoluteSize.Y > 0 then h = Element.AbsoluteSize.Y end
+                        end
+                        Size = Size + h;
                     end;
                 end;
                 BoxOuter.Size = UDim2.new(1, 0, 0, 20 + Size + 2 + 2);
