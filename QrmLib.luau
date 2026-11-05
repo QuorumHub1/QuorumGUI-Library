@@ -89,9 +89,7 @@ local QuorumLib = {
     Icons = nil;
 };
 
--- Lucide icons fetched the same way Rayfield does it: one icons.lua module with a prebuilt atlas.
-local RAYFIELD_COMMIT = "a2c3063cc1e54db522dac4ab837b0a35a0da5ed0"
-local RAYFIELD_RAW = "https://raw.githubusercontent.com/SiriusSoftwareLtd/Rayfield/" .. RAYFIELD_COMMIT .. "/"
+local ICONS_URL = "https://raw.githubusercontent.com/QuorumHub1/QuorumGUI-Library/main/icons.lua"
 
 local function LoadIcons()
     if QuorumLib.Icons then return QuorumLib.Icons end
@@ -99,7 +97,7 @@ local function LoadIcons()
         QuorumLib.Icons = getgenv().QuorumIcons
         return QuorumLib.Icons
     end
-    local ok, source = pcall(function() return game:HttpGet(RAYFIELD_RAW .. 'icons.lua') end)
+    local ok, source = pcall(function() return game:HttpGet(ICONS_URL) end)
     if ok and type(source) == 'string' and #source > 0 then
         local execOk, result = pcall(function() return loadstring(source)() end)
         if execOk and type(result) == 'table' then
@@ -190,6 +188,26 @@ function QuorumLib:BuildIcon(IconName, Parent, Size, Position, AnchorPoint, ZInd
     });
     QuorumLib:AddToRegistry(iconImage, { ImageColor3 = 'FontColor' });
     return iconImage
+end
+
+local function ParseSegments(Text)
+    local segments = {}
+    local pos = 1
+    local len = #Text
+    while pos <= len do
+        local startIdx, endIdx, name = string.find(Text, "<([%w%-_]+)>", pos)
+        if startIdx then
+            if startIdx > pos then
+                table.insert(segments, { type = 'text', value = string.sub(Text, pos, startIdx - 1) })
+            end
+            table.insert(segments, { type = 'icon', value = name })
+            pos = endIdx + 1
+        else
+            table.insert(segments, { type = 'text', value = string.sub(Text, pos) })
+            break
+        end
+    end
+    return segments
 end
 
 function QuorumLib:SafeCallback(f, ...)
@@ -1407,48 +1425,108 @@ do
     end;
 
     function Funcs:AddLabel(Text, DoesWrap)
-        local IconName, CleanText = QuorumLib:ParseIcon(Text)
+        local segments = ParseSegments(Text)
         local Label = {};
         local Groupbox = self;
         local Container = Groupbox.Container;
-        local TextLabel = QuorumLib:CreateLabel({
-            Size = UDim2.new(1, IconName and -24 or -4, 0, 15);
-            Position = UDim2.new(0, IconName and 24 or 0, 0, 0);
-            TextSize = 14;
-            Text = CleanText;
-            TextWrapped = DoesWrap or false,
-            TextXAlignment = Enum.TextXAlignment.Left;
+
+        local Row = QuorumLib:Create('Frame', {
+            BackgroundTransparency = 1;
+            Size = UDim2.new(1, -4, 0, 15);
             ZIndex = 5;
             Parent = Container;
         });
 
-        if IconName then
-            QuorumLib:BuildIcon(IconName, Container, UDim2.new(0, 14, 0, 14), UDim2.new(0, 4, 0, 2), Vector2.new(0, 0), 5)
+        local Layout = QuorumLib:Create('UIListLayout', {
+            Padding = UDim.new(0, 4);
+            FillDirection = Enum.FillDirection.Horizontal;
+            VerticalAlignment = Enum.VerticalAlignment.Center;
+            SortOrder = Enum.SortOrder.LayoutOrder;
+            Parent = Row;
+        });
+
+        local TextLabel
+
+        for i, seg in ipairs(segments) do
+            if seg.type == 'icon' then
+                local asset = GetLucideAsset(seg.value)
+                if asset then
+                    local icon = QuorumLib:Create('ImageLabel', {
+                        BackgroundTransparency = 1;
+                        Size = UDim2.new(0, 14, 0, 14);
+                        Image = 'rbxassetid://' .. asset.id;
+                        ImageRectOffset = asset.imageRectOffset;
+                        ImageRectSize = asset.imageRectSize;
+                        ImageColor3 = QuorumLib.FontColor;
+                        LayoutOrder = i;
+                        ZIndex = 5;
+                        Parent = Row;
+                    });
+                    QuorumLib:AddToRegistry(icon, { ImageColor3 = 'FontColor' });
+                end
+            else
+                local txt = QuorumLib:CreateLabel({
+                    Size = UDim2.new(0, 0, 0, 15);
+                    AutomaticSize = Enum.AutomaticSize.X;
+                    TextSize = 14;
+                    Text = seg.value;
+                    TextXAlignment = Enum.TextXAlignment.Left;
+                    LayoutOrder = i;
+                    ZIndex = 5;
+                    Parent = Row;
+                });
+                QuorumLib:AddToRegistry(txt, { TextColor3 = 'FontColor' });
+                TextLabel = txt
+            end
         end
 
         if DoesWrap then
-            local Y = select(2, QuorumLib:GetTextBounds(CleanText, QuorumLib.Font, 14, Vector2.new(TextLabel.AbsoluteSize.X, math.huge)))
-            TextLabel.Size = UDim2.new(1, IconName and -24 or -4, 0, Y)
-        else
-            QuorumLib:Create('UIListLayout', {
-                Padding = UDim.new(0, 4);
-                FillDirection = Enum.FillDirection.Horizontal;
-                HorizontalAlignment = Enum.HorizontalAlignment.Right;
-                SortOrder = Enum.SortOrder.LayoutOrder;
-                Parent = TextLabel;
-            });
+            Row.Size = UDim2.new(1, -4, 0, 0)
+            Row.AutomaticSize = Enum.AutomaticSize.Y
+            Layout.FillDirection = Enum.FillDirection.Vertical
         end
 
-        Label.TextLabel = TextLabel;
+        Label.TextLabel = TextLabel or Row;
         Label.Container = Container;
 
         function Label:SetText(NewText)
-            local NewIcon, NewClean = QuorumLib:ParseIcon(NewText)
-            TextLabel.Text = NewClean
-            if DoesWrap then
-                local Y = select(2, QuorumLib:GetTextBounds(NewClean, QuorumLib.Font, 14, Vector2.new(TextLabel.AbsoluteSize.X, math.huge)))
-                TextLabel.Size = UDim2.new(1, NewIcon and -24 or -4, 0, Y)
+            local segs = ParseSegments(NewText)
+            for _, child in next, Row:GetChildren() do
+                if child:IsA('TextLabel') or child:IsA('ImageLabel') then
+                    child:Destroy()
+                end
             end
+            local newLabel
+            for i, seg in ipairs(segs) do
+                if seg.type == 'icon' then
+                    local asset = GetLucideAsset(seg.value)
+                    if asset then
+                        QuorumLib:Create('ImageLabel', {
+                            BackgroundTransparency = 1;
+                            Size = UDim2.new(0, 14, 0, 14);
+                            Image = 'rbxassetid://' .. asset.id;
+                            ImageRectOffset = asset.imageRectOffset;
+                            ImageRectSize = asset.imageRectSize;
+                            ImageColor3 = QuorumLib.FontColor;
+                            LayoutOrder = i;
+                            ZIndex = 5;
+                            Parent = Row;
+                        });
+                    end
+                else
+                    newLabel = QuorumLib:CreateLabel({
+                        Size = UDim2.new(0, 0, 0, 15);
+                        AutomaticSize = Enum.AutomaticSize.X;
+                        TextSize = 14;
+                        Text = seg.value;
+                        TextXAlignment = Enum.TextXAlignment.Left;
+                        LayoutOrder = i;
+                        ZIndex = 5;
+                        Parent = Row;
+                    });
+                end
+            end
+            Label.TextLabel = newLabel
             Groupbox:Resize();
         end;
 
@@ -1479,7 +1557,7 @@ do
         local Container = Groupbox.Container;
 
         local function CreateBaseButton(Button)
-            local IconName, CleanText = QuorumLib:ParseIcon(Button.Text)
+            local segments = ParseSegments(Button.Text)
             local Outer = QuorumLib:Create('Frame', {
                 BackgroundColor3 = Color3.new(0, 0, 0);
                 BorderColor3 = Color3.new(0, 0, 0);
@@ -1496,17 +1574,59 @@ do
                 Parent = Outer;
             });
 
-            local Label = QuorumLib:CreateLabel({
-                Size = UDim2.new(1, IconName and -24 or 0, 1, 0);
-                Position = UDim2.new(0, IconName and 24 or 0, 0, 0);
-                TextSize = 14;
-                Text = CleanText;
+            local Row = QuorumLib:Create('Frame', {
+                BackgroundTransparency = 1;
+                Size = UDim2.new(1, -12, 1, 0);
+                Position = UDim2.new(0, 6, 0, 0);
                 ZIndex = 6;
                 Parent = Inner;
             });
 
-            if IconName then
-                QuorumLib:BuildIcon(IconName, Inner, UDim2.new(0, 14, 0, 14), UDim2.new(0, 6, 0.5, 0), Vector2.new(0, 0.5), 7)
+            QuorumLib:Create('UIListLayout', {
+                Padding = UDim.new(0, 4);
+                FillDirection = Enum.FillDirection.Horizontal;
+                VerticalAlignment = Enum.VerticalAlignment.Center;
+                SortOrder = Enum.SortOrder.LayoutOrder;
+                Parent = Row;
+            });
+
+            local Label;
+            for i, seg in ipairs(segments) do
+                if seg.type == 'icon' then
+                    local asset = GetLucideAsset(seg.value)
+                    if asset then
+                        QuorumLib:Create('ImageLabel', {
+                            BackgroundTransparency = 1;
+                            Size = UDim2.new(0, 14, 0, 14);
+                            Image = 'rbxassetid://' .. asset.id;
+                            ImageRectOffset = asset.imageRectOffset;
+                            ImageRectSize = asset.imageRectSize;
+                            ImageColor3 = QuorumLib.FontColor;
+                            LayoutOrder = i;
+                            ZIndex = 7;
+                            Parent = Row;
+                        });
+                    end
+                else
+                    Label = QuorumLib:CreateLabel({
+                        Size = UDim2.new(0, 0, 0, 15);
+                        AutomaticSize = Enum.AutomaticSize.X;
+                        TextSize = 14;
+                        Text = seg.value;
+                        ZIndex = 6;
+                        LayoutOrder = i;
+                        Parent = Row;
+                    });
+                end
+            end
+            if not Label then
+                Label = QuorumLib:CreateLabel({
+                    Size = UDim2.new(1, 0, 1, 0);
+                    TextSize = 14;
+                    Text = Button.Text;
+                    ZIndex = 6;
+                    Parent = Row;
+                })
             end
 
             QuorumLib:Create('UIGradient', {
@@ -1566,8 +1686,13 @@ do
                     QuorumLib:RemoveFromRegistry(Button.Label)
                     QuorumLib:AddToRegistry(Button.Label, { TextColor3 = 'FontColor' })
                     Button.Label.TextColor3 = QuorumLib.FontColor
-                    local IconName, CleanText = QuorumLib:ParseIcon(Button.Text)
-                    Button.Label.Text = CleanText
+                    local segments = ParseSegments(Button.Text)
+                    for _, seg in next, segments do
+                        if seg.type == 'text' then
+                            Button.Label.Text = seg.value
+                            break
+                        end
+                    end
                     task.defer(rawset, Button, 'Locked', false)
                     if clicked then QuorumLib:SafeCallback(Button.Func) end
                     return
@@ -1642,7 +1767,7 @@ do
 
     function Funcs:AddInput(Idx, Info)
         assert(Info.Text, 'AddInput: Missing `Text` string.')
-        local IconName, CleanText = QuorumLib:ParseIcon(Info.Text)
+        local segments = ParseSegments(Info.Text)
         local Textbox = {
             Value = Info.Default or '';
             Numeric = Info.Numeric or false;
@@ -1653,18 +1778,48 @@ do
 
         local Groupbox = self;
         local Container = Groupbox.Container;
-        local InputLabel = QuorumLib:CreateLabel({
-            Size = UDim2.new(1, IconName and -24 or 0, 0, 15);
-            Position = UDim2.new(0, IconName and 24 or 0, 0, 0);
-            TextSize = 14;
-            Text = CleanText;
-            TextXAlignment = Enum.TextXAlignment.Left;
+
+        local InputLabelRow = QuorumLib:Create('Frame', {
+            BackgroundTransparency = 1;
+            Size = UDim2.new(1, 0, 0, 15);
             ZIndex = 5;
             Parent = Container;
         });
-
-        if IconName then
-            QuorumLib:BuildIcon(IconName, Container, UDim2.new(0, 14, 0, 14), UDim2.new(0, 4, 0, 2), Vector2.new(0, 0), 5)
+        QuorumLib:Create('UIListLayout', {
+            Padding = UDim.new(0, 4);
+            FillDirection = Enum.FillDirection.Horizontal;
+            VerticalAlignment = Enum.VerticalAlignment.Center;
+            SortOrder = Enum.SortOrder.LayoutOrder;
+            Parent = InputLabelRow;
+        });
+        for i, seg in ipairs(segments) do
+            if seg.type == 'icon' then
+                local asset = GetLucideAsset(seg.value)
+                if asset then
+                    QuorumLib:Create('ImageLabel', {
+                        BackgroundTransparency = 1;
+                        Size = UDim2.new(0, 14, 0, 14);
+                        Image = 'rbxassetid://' .. asset.id;
+                        ImageRectOffset = asset.imageRectOffset;
+                        ImageRectSize = asset.imageRectSize;
+                        ImageColor3 = QuorumLib.FontColor;
+                        LayoutOrder = i;
+                        ZIndex = 5;
+                        Parent = InputLabelRow;
+                    });
+                end
+            else
+                QuorumLib:CreateLabel({
+                    Size = UDim2.new(0, 0, 0, 15);
+                    AutomaticSize = Enum.AutomaticSize.X;
+                    TextSize = 14;
+                    Text = seg.value;
+                    TextXAlignment = Enum.TextXAlignment.Left;
+                    LayoutOrder = i;
+                    ZIndex = 5;
+                    Parent = InputLabelRow;
+                });
+            end
         end
 
         Groupbox:AddBlank(1);
@@ -1790,7 +1945,7 @@ do
 
     function Funcs:AddToggle(Idx, Info)
         assert(Info.Text, 'AddInput: Missing `Text` string.')
-        local IconName, CleanText = QuorumLib:ParseIcon(Info.Text)
+        local segments = ParseSegments(Info.Text)
         local Toggle = {
             Value = Info.Default or false;
             Type = 'Toggle';
@@ -1830,18 +1985,50 @@ do
 
         QuorumLib:AddToRegistry(ToggleInner, { BackgroundColor3 = 'MainColor'; BorderColor3 = 'OutlineColor'; });
 
-        local ToggleLabel = QuorumLib:CreateLabel({
-            Size = UDim2.new(1, IconName and -44 or -20, 1, 0);
-            Position = UDim2.new(0, IconName and 44 or 20, 0, 0);
-            TextSize = 14;
-            Text = CleanText;
-            TextXAlignment = Enum.TextXAlignment.Left;
+        local Row = QuorumLib:Create('Frame', {
+            BackgroundTransparency = 1;
+            Size = UDim2.new(1, -20, 1, 0);
+            Position = UDim2.new(0, 20, 0, 0);
             ZIndex = 6;
             Parent = ToggleContainer;
         });
 
-        if IconName then
-            QuorumLib:BuildIcon(IconName, ToggleContainer, UDim2.new(0, 14, 0, 14), UDim2.new(0, 22, 0.5, 0), Vector2.new(0, 0.5), 6)
+        QuorumLib:Create('UIListLayout', {
+            Padding = UDim.new(0, 4);
+            FillDirection = Enum.FillDirection.Horizontal;
+            VerticalAlignment = Enum.VerticalAlignment.Center;
+            SortOrder = Enum.SortOrder.LayoutOrder;
+            Parent = Row;
+        });
+
+        for i, seg in ipairs(segments) do
+            if seg.type == 'icon' then
+                local asset = GetLucideAsset(seg.value)
+                if asset then
+                    QuorumLib:Create('ImageLabel', {
+                        BackgroundTransparency = 1;
+                        Size = UDim2.new(0, 14, 0, 14);
+                        Image = 'rbxassetid://' .. asset.id;
+                        ImageRectOffset = asset.imageRectOffset;
+                        ImageRectSize = asset.imageRectSize;
+                        ImageColor3 = QuorumLib.FontColor;
+                        LayoutOrder = i;
+                        ZIndex = 6;
+                        Parent = Row;
+                    });
+                end
+            else
+                QuorumLib:CreateLabel({
+                    Size = UDim2.new(0, 0, 0, 15);
+                    AutomaticSize = Enum.AutomaticSize.X;
+                    TextSize = 14;
+                    Text = seg.value;
+                    TextXAlignment = Enum.TextXAlignment.Left;
+                    LayoutOrder = i;
+                    ZIndex = 6;
+                    Parent = Row;
+                });
+            end
         end
 
         local ToggleRegion = QuorumLib:Create('Frame', {
@@ -1891,16 +2078,29 @@ do
         end);
 
         if Toggle.Risky then
-            QuorumLib:RemoveFromRegistry(ToggleLabel)
-            ToggleLabel.TextColor3 = QuorumLib.RiskColor
-            QuorumLib:AddToRegistry(ToggleLabel, { TextColor3 = 'RiskColor' })
+            local firstText = Row:FindFirstChildWhichIsA('TextLabel')
+            if firstText then
+                QuorumLib:RemoveFromRegistry(firstText)
+                firstText.TextColor3 = QuorumLib.RiskColor
+                QuorumLib:AddToRegistry(firstText, { TextColor3 = 'RiskColor' })
+            end
         end
 
         Toggle:Display();
         Groupbox:AddBlank(Info.BlankSize or 5 + 2);
         Groupbox:Resize();
 
-        Toggle.TextLabel = ToggleLabel;
+        local firstTextLabel = Row:FindFirstChildWhichIsA('TextLabel')
+        if not firstTextLabel then
+            firstTextLabel = QuorumLib:CreateLabel({
+                Size = UDim2.new(1, 0, 1, 0);
+                TextSize = 14;
+                Text = '';
+                ZIndex = 6;
+                Parent = Row;
+            })
+        end
+        Toggle.TextLabel = firstTextLabel;
         Toggle.Container = Container;
         setmetatable(Toggle, BaseAddons);
         Toggles[Idx] = Toggle;
@@ -1917,7 +2117,7 @@ do
         assert(Info.Max, 'AddSlider: Missing maximum value.');
         assert(Info.Rounding, 'AddSlider: Missing rounding value.');
 
-        local IconName, CleanText = QuorumLib:ParseIcon(Info.Text)
+        local segments = ParseSegments(Info.Text)
         local Slider = {
             Value = Info.Default;
             Min = Info.Min;
@@ -1932,18 +2132,48 @@ do
         local Container = Groupbox.Container;
 
         if not Info.Compact then
-            QuorumLib:CreateLabel({
-                Size = UDim2.new(1, IconName and -24 or 0, 0, 10);
-                Position = UDim2.new(0, IconName and 24 or 0, 0, 0);
-                TextSize = 14;
-                Text = CleanText;
-                TextXAlignment = Enum.TextXAlignment.Left;
-                TextYAlignment = Enum.TextYAlignment.Bottom;
+            local LabelRow = QuorumLib:Create('Frame', {
+                BackgroundTransparency = 1;
+                Size = UDim2.new(1, 0, 0, 10);
                 ZIndex = 5;
                 Parent = Container;
             });
-            if IconName then
-                QuorumLib:BuildIcon(IconName, Container, UDim2.new(0, 14, 0, 14), UDim2.new(0, 4, 0, 0), Vector2.new(0, 0), 5)
+            QuorumLib:Create('UIListLayout', {
+                Padding = UDim.new(0, 4);
+                FillDirection = Enum.FillDirection.Horizontal;
+                VerticalAlignment = Enum.VerticalAlignment.Bottom;
+                SortOrder = Enum.SortOrder.LayoutOrder;
+                Parent = LabelRow;
+            });
+            for i, seg in ipairs(segments) do
+                if seg.type == 'icon' then
+                    local asset = GetLucideAsset(seg.value)
+                    if asset then
+                        QuorumLib:Create('ImageLabel', {
+                            BackgroundTransparency = 1;
+                            Size = UDim2.new(0, 14, 0, 14);
+                            Image = 'rbxassetid://' .. asset.id;
+                            ImageRectOffset = asset.imageRectOffset;
+                            ImageRectSize = asset.imageRectSize;
+                            ImageColor3 = QuorumLib.FontColor;
+                            LayoutOrder = i;
+                            ZIndex = 5;
+                            Parent = LabelRow;
+                        });
+                    end
+                else
+                    QuorumLib:CreateLabel({
+                        Size = UDim2.new(0, 0, 0, 10);
+                        AutomaticSize = Enum.AutomaticSize.X;
+                        TextSize = 14;
+                        Text = seg.value;
+                        TextXAlignment = Enum.TextXAlignment.Left;
+                        TextYAlignment = Enum.TextYAlignment.Bottom;
+                        LayoutOrder = i;
+                        ZIndex = 5;
+                        Parent = LabelRow;
+                    });
+                end
             end
             Groupbox:AddBlank(3);
         end
@@ -2009,7 +2239,11 @@ do
         function Slider:Display()
             local Suffix = Info.Suffix or '';
             if Info.Compact then
-                DisplayLabel.Text = CleanText .. ': ' .. Slider.Value .. Suffix
+                local txt = ''
+                for _, seg in next, segments do
+                    if seg.type == 'text' then txt = txt .. seg.value end
+                end
+                DisplayLabel.Text = txt .. ': ' .. Slider.Value .. Suffix
             elseif Info.HideMax then
                 DisplayLabel.Text = string.format('%s', Slider.Value .. Suffix)
             else
@@ -2088,7 +2322,7 @@ do
 
         if (not Info.Text) then Info.Compact = true; end;
 
-        local IconName, CleanText = QuorumLib:ParseIcon(Info.Text or '')
+        local segments = ParseSegments(Info.Text or '')
         local Dropdown = {
             Values = Info.Values;
             Value = Info.Multi and {};
@@ -2103,18 +2337,48 @@ do
         local RelativeOffset = 0;
 
         if not Info.Compact then
-            local DropdownLabel = QuorumLib:CreateLabel({
-                Size = UDim2.new(1, IconName and -24 or 0, 0, 10);
-                Position = UDim2.new(0, IconName and 24 or 0, 0, 0);
-                TextSize = 14;
-                Text = CleanText;
-                TextXAlignment = Enum.TextXAlignment.Left;
-                TextYAlignment = Enum.TextYAlignment.Bottom;
+            local LabelRow = QuorumLib:Create('Frame', {
+                BackgroundTransparency = 1;
+                Size = UDim2.new(1, 0, 0, 10);
                 ZIndex = 5;
                 Parent = Container;
             });
-            if IconName then
-                QuorumLib:BuildIcon(IconName, Container, UDim2.new(0, 14, 0, 14), UDim2.new(0, 4, 0, 0), Vector2.new(0, 0), 5)
+            QuorumLib:Create('UIListLayout', {
+                Padding = UDim.new(0, 4);
+                FillDirection = Enum.FillDirection.Horizontal;
+                VerticalAlignment = Enum.VerticalAlignment.Bottom;
+                SortOrder = Enum.SortOrder.LayoutOrder;
+                Parent = LabelRow;
+            });
+            for i, seg in ipairs(segments) do
+                if seg.type == 'icon' then
+                    local asset = GetLucideAsset(seg.value)
+                    if asset then
+                        QuorumLib:Create('ImageLabel', {
+                            BackgroundTransparency = 1;
+                            Size = UDim2.new(0, 14, 0, 14);
+                            Image = 'rbxassetid://' .. asset.id;
+                            ImageRectOffset = asset.imageRectOffset;
+                            ImageRectSize = asset.imageRectSize;
+                            ImageColor3 = QuorumLib.FontColor;
+                            LayoutOrder = i;
+                            ZIndex = 5;
+                            Parent = LabelRow;
+                        });
+                    end
+                else
+                    QuorumLib:CreateLabel({
+                        Size = UDim2.new(0, 0, 0, 10);
+                        AutomaticSize = Enum.AutomaticSize.X;
+                        TextSize = 14;
+                        Text = seg.value;
+                        TextXAlignment = Enum.TextXAlignment.Left;
+                        TextYAlignment = Enum.TextYAlignment.Bottom;
+                        LayoutOrder = i;
+                        ZIndex = 5;
+                        Parent = LabelRow;
+                    });
+                end
             end
             Groupbox:AddBlank(3);
         end
