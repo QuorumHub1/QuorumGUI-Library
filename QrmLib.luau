@@ -1,4 +1,4 @@
-warn"hi"
+warn"s"
 local _oldQrm = getgenv and getgenv().QuorumLib
 if _oldQrm and _oldQrm.Unload then
     pcall(function() _oldQrm:Unload() end)
@@ -2429,10 +2429,10 @@ do
         return Area;
     end
 
-    QuorumLib.NotificationAreas.TopLeft = CreateNotificationArea(UDim2.new(0, 0, 0, 40), UDim2.new(0, 300, 0, 200))
-    QuorumLib.NotificationAreas.TopRight = CreateNotificationArea(UDim2.new(1, -300, 0, 40), UDim2.new(0, 300, 0, 200))
-    QuorumLib.NotificationAreas.BottomLeft = CreateNotificationArea(UDim2.new(0, 0, 1, -200), UDim2.new(0, 300, 0, 200), 'BottomLeft')
-    QuorumLib.NotificationAreas.BottomRight = CreateNotificationArea(UDim2.new(1, -300, 1, -200), UDim2.new(0, 300, 0, 200), 'BottomRight')
+    QuorumLib.NotificationAreas.TopLeft = CreateNotificationArea(UDim2.new(0, 10, 0, 45), UDim2.new(0, 300, 0, 200))
+    QuorumLib.NotificationAreas.TopRight = CreateNotificationArea(UDim2.new(1, -310, 0, 45), UDim2.new(0, 300, 0, 200))
+    QuorumLib.NotificationAreas.BottomLeft = CreateNotificationArea(UDim2.new(0, 10, 1, -200), UDim2.new(0, 300, 0, 200), 'BottomLeft')
+    QuorumLib.NotificationAreas.BottomRight = CreateNotificationArea(UDim2.new(1, -310, 1, -200), UDim2.new(0, 300, 0, 200), 'BottomRight')
     
     QuorumLib.NotificationArea = QuorumLib.NotificationAreas.TopLeft
 
@@ -2576,10 +2576,14 @@ function QuorumLib:Notify(Text, Time, Position)
     YSize = YSize + 7
 
     local TargetArea = QuorumLib.NotificationAreas[Position or 'TopLeft'] or QuorumLib.NotificationAreas.TopLeft
-
+    
+    local isRight = (Position == 'TopRight' or Position == 'BottomRight')
+    local anchor = isRight and Vector2.new(1, 0) or Vector2.new(0, 0)
+    
     local NotifyOuter = QuorumLib:Create('Frame', {
         BorderColor3 = Color3.new(0, 0, 0);
-        Position = UDim2.new(0, 0, 0, 0);
+        AnchorPoint = anchor;
+        Position = isRight and UDim2.new(1, 0, 0, 0) or UDim2.new(0, 0, 0, 0);
         Size = UDim2.new(0, 0, 0, YSize);
         ClipsDescendants = true;
         ZIndex = 100;
