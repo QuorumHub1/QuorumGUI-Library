@@ -1,4 +1,4 @@
-print"eeeee"
+warn"hui"
 local _oldQrm = getgenv and getgenv().QuorumLib
 if _oldQrm and _oldQrm.Unload then
     pcall(function() _oldQrm:Unload() end)
@@ -129,6 +129,26 @@ local function GetLucideAsset(name)
     }
 end
 
+local function ParseSegments(Text)
+    local segments = {}
+    local pos = 1
+    local len = #Text
+    while pos <= len do
+        local startIdx, endIdx, name = string.find(Text, "<([%w%-_]+)>", pos)
+        if startIdx then
+            if startIdx > pos then
+                table.insert(segments, { type = 'text', value = string.sub(Text, pos, startIdx - 1) })
+            end
+            table.insert(segments, { type = 'icon', value = name })
+            pos = endIdx + 1
+        else
+            table.insert(segments, { type = 'text', value = string.sub(Text, pos) })
+            break
+        end
+    end
+    return segments
+end
+
 local function ParseRichText(Text)
     local out = ''
     local pos = 1
@@ -150,6 +170,14 @@ local function ParseRichText(Text)
         end
     end
     return out
+end
+
+local function GetCleanText(segments)
+    local text = ''
+    for _, seg in next, segments do
+        if seg.type == 'text' then text = text .. seg.value end
+    end
+    return text
 end
 
 local function BuildButtonContent(segments, Parent, ZIndex)
