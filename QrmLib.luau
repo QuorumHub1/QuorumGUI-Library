@@ -82,7 +82,7 @@ local QuorumLib = {
     CursorDrawing = nil;
     CursorOutlineDrawing = nil;
     MenuToggled = false;
-    UnlockCamera = true; -- Переименовано из FixFirstPerson
+    UnlockCamera = true;
 };
 
 local RainbowStep = 0
@@ -1709,6 +1709,8 @@ do
             BackgroundColor3 = Color3.new(0, 0, 0);
             BorderColor3 = Color3.new(0, 0, 0);
             Size = UDim2.new(0, 13, 0, 13);
+            Position = UDim2.new(0, 0, 0.5, -6.5); -- ИСПРАВЛЕНИЕ: центрируем иконку
+            AnchorPoint = Vector2.new(0, 0.5); -- ИСПРАВЛЕНИЕ: якорь для центрирования
             ZIndex = 5;
             Parent = Container;
         });
@@ -1728,12 +1730,12 @@ do
 
         local ToggleLabel = QuorumLib:CreateLabel({
             Size = UDim2.new(1, -34, 1, 0);
-            Position = UDim2.new(0, 34, 0, 0); -- СДВИГ ВПРАВО НА 34 ПИКСЕЛЯ
+            Position = UDim2.new(0, 34, 0, 0); -- Отступ 34 пикселя
             TextSize = 14;
             Text = Info.Text;
             TextXAlignment = Enum.TextXAlignment.Left;
             ZIndex = 6;
-            Parent = ToggleOuter;
+            Parent = ToggleOuter; -- Родитель: ToggleOuter
         });
 
         local ToggleRegion = QuorumLib:Create('Frame', {
