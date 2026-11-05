@@ -1,4 +1,4 @@
-warn"e"
+warn"ee"
 local _oldQrm = getgenv and getgenv().QuorumLib
 if _oldQrm and _oldQrm.Unload then
     pcall(function() _oldQrm:Unload() end)
@@ -1706,12 +1706,20 @@ do
 
         local Groupbox = self;
         local Container = Groupbox.Container;
+        
+        local ToggleContainer = QuorumLib:Create('Frame', {
+            BackgroundTransparency = 1;
+            Size = UDim2.new(1, 0, 0, 13);
+            ZIndex = 5;
+            Parent = Container;
+        });
+
         local ToggleOuter = QuorumLib:Create('Frame', {
             BackgroundColor3 = Color3.new(0, 0, 0);
             BorderColor3 = Color3.new(0, 0, 0);
             Size = UDim2.new(0, 13, 0, 13);
             ZIndex = 5;
-            Parent = Container;
+            Parent = ToggleContainer;
         });
 
         QuorumLib:AddToRegistry(ToggleOuter, { BorderColor3 = 'Black'; });
@@ -1728,20 +1736,20 @@ do
         QuorumLib:AddToRegistry(ToggleInner, { BackgroundColor3 = 'MainColor'; BorderColor3 = 'OutlineColor'; });
 
         local ToggleLabel = QuorumLib:CreateLabel({
-            Size = UDim2.new(1, -26, 1, 0);
-            Position = UDim2.new(0, 26, 0, 0);
+            Size = UDim2.new(1, -30, 1, 0);
+            Position = UDim2.new(0, 30, 0, 0);
             TextSize = 14;
             Text = Info.Text;
             TextXAlignment = Enum.TextXAlignment.Left;
             ZIndex = 6;
-            Parent = ToggleOuter;
+            Parent = ToggleContainer;
         });
 
         local ToggleRegion = QuorumLib:Create('Frame', {
             BackgroundTransparency = 1;
             Size = UDim2.new(1, 0, 1, 0);
             ZIndex = 8;
-            Parent = ToggleOuter;
+            Parent = ToggleContainer;
         });
 
         QuorumLib:OnHighlight(ToggleRegion, ToggleOuter, { BorderColor3 = 'AccentColor' }, { BorderColor3 = 'Black' });
@@ -1903,7 +1911,6 @@ do
             end
 
             local X = math.ceil(QuorumLib:MapValue(Slider.Value, Slider.Min, Slider.Max, 0, Slider.MaxSize));
-            -- Масштабируем заполнение для адаптивного изменения размера
             Fill.Size = UDim2.new((Slider.Value - Slider.Min) / (Slider.Max - Slider.Min), 0, 1, 0);
             HideBorderRight.Visible = not (Slider.Value == Slider.Max or Slider.Value == Slider.Min);
         end;
@@ -2851,7 +2858,7 @@ function QuorumLib:CreateWindow(...)
             BackgroundTransparency = 1;
             BorderSizePixel = 0;
             Position = UDim2.new(0, 8 - 1, 0, 8 - 1);
-            Size = UDim2.new(0.5, -12 + 2, 0, 507 + 2);
+            Size = UDim2.new(0.5, -12 + 2, 1, -16 + 2);
             CanvasSize = UDim2.new(0, 0, 0, 0);
             BottomImage = '';
             TopImage = '';
@@ -2864,7 +2871,7 @@ function QuorumLib:CreateWindow(...)
             BackgroundTransparency = 1;
             BorderSizePixel = 0;
             Position = UDim2.new(0.5, 4 + 1, 0, 8 - 1);
-            Size = UDim2.new(0.5, -12 + 2, 0, 507 + 2);
+            Size = UDim2.new(0.5, -12 + 2, 1, -16 + 2);
             CanvasSize = UDim2.new(0, 0, 0, 0);
             BottomImage = '';
             TopImage = '';
