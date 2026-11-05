@@ -1,4 +1,3 @@
-warn"halo"
 local _oldQrm = getgenv and getgenv().QuorumLib
 if _oldQrm and _oldQrm.Unload then
     pcall(function() _oldQrm:Unload() end)
@@ -3562,7 +3561,7 @@ function QuorumLib:CreateWindow(...)
         function Tab:AddRightTabbox(Name) return Tab:AddTabbox({ Name = Name, Side = 2; }); end;
 
         TabButton.InputBegan:Connect(function(Input)
-            if IsPrimaryPress(Input) then Tab:ShowTab(); end;
+            if IsPrimaryPress(Input) then Tab:ShowTab(); end
         end);
 
         if #TabContainer:GetChildren() == 1 then Tab:ShowTab(); end;
