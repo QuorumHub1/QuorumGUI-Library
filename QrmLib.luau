@@ -1,4 +1,4 @@
-warn"this is new"
+warn"this is new2"
 local _oldQrm = getgenv and getgenv().QuorumLib
 if _oldQrm and _oldQrm.Unload then
     pcall(function() _oldQrm:Unload() end)
@@ -226,8 +226,8 @@ function QuorumLib:MakeDraggable(Instance, Cutoff)
     Instance.Active = true;
 
     Instance.InputBegan:Connect(function(Input)
-        if LooksSynthetic(Input) then return end
         if not IsPrimaryPress(Input) then return end
+        if Instance.Active == false then return end
 
         local StartPos = GetInputPosition(Input)
         local ObjPos = Vector2.new(
@@ -239,17 +239,29 @@ function QuorumLib:MakeDraggable(Instance, Cutoff)
             return;
         end;
 
-        while IsPrimaryHeld() do
-            local Cur = GetCursorPosition()
-            Instance.Position = UDim2.new(
-                0,
-                Cur.X - ObjPos.X + (Instance.Size.X.Offset * Instance.AnchorPoint.X),
-                0,
-                Cur.Y - ObjPos.Y + (Instance.Size.Y.Offset * Instance.AnchorPoint.Y)
-            );
+        local Dragging = true;
 
-            RenderStepped:Wait();
-        end;
+        local EndConn
+        EndConn = InputService.InputEnded:Connect(function(EndInput)
+            if EndInput.UserInputType == Enum.UserInputType.MouseButton1
+                or EndInput.UserInputType == Enum.UserInputType.Touch then
+                Dragging = false;
+                if EndConn then EndConn:Disconnect() end
+            end
+        end);
+
+        task.spawn(function()
+            while Dragging do
+                local Cur = GetCursorPosition()
+                Instance.Position = UDim2.new(
+                    0,
+                    Cur.X - ObjPos.X + (Instance.Size.X.Offset * Instance.AnchorPoint.X),
+                    0,
+                    Cur.Y - ObjPos.Y + (Instance.Size.Y.Offset * Instance.AnchorPoint.Y)
+                );
+                RenderStepped:Wait();
+            end;
+        end);
     end)
 end;
 
