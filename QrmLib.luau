@@ -1,5 +1,3 @@
-print"dsioasdduisjsduisdyuidsyusdiudsyiusdduiassdyuisdaiu"
-warn"ff"
 local _oldQrm = getgenv and getgenv().QuorumLib
 if _oldQrm and _oldQrm.Unload then
     pcall(function() _oldQrm:Unload() end)
@@ -88,10 +86,50 @@ local QuorumLib = {
     UnlockCamera = true;
     NotificationAreas = {};
     UseIcons = false;
-    IconCache = {};
-    IconAssetCache = {};
-    LoadingIcons = {};
+    Icons = nil;
 };
+
+-- Lucide icons fetched the same way Rayfield does it: one icons.lua module with a prebuilt atlas.
+local RAYFIELD_COMMIT = "a2c3063cc1e54db522dac4ab837b0a35a0da5ed0"
+local RAYFIELD_RAW = "https://raw.githubusercontent.com/SiriusSoftwareLtd/Rayfield/" .. RAYFIELD_COMMIT .. "/"
+
+local function LoadIcons()
+    if QuorumLib.Icons then return QuorumLib.Icons end
+    if getgenv and getgenv().QuorumIcons then
+        QuorumLib.Icons = getgenv().QuorumIcons
+        return QuorumLib.Icons
+    end
+    local ok, source = pcall(function() return game:HttpGet(RAYFIELD_RAW .. 'icons.lua') end)
+    if ok and type(source) == 'string' and #source > 0 then
+        local execOk, result = pcall(function() return loadstring(source)() end)
+        if execOk and type(result) == 'table' then
+            QuorumLib.Icons = result
+            if getgenv then getgenv().QuorumIcons = result end
+            return result
+        end
+    end
+    return nil
+end
+
+local function GetLucideAsset(name)
+    if not QuorumLib.UseIcons then return nil end
+    local icons = LoadIcons()
+    if not icons then return nil end
+    name = string.match(string.lower(name), "^%s*(.*)%s*$") or name
+    local sized = icons['48px']
+    local entry = sized and sized[name]
+    if not entry then return nil end
+    local rirs = entry[2]
+    local riro = entry[3]
+    if type(entry[1]) ~= 'number' or type(rirs) ~= 'table' or type(riro) ~= 'table' then
+        return nil
+    end
+    return {
+        id = entry[1],
+        imageRectSize = Vector2.new(rirs[1], rirs[2]),
+        imageRectOffset = Vector2.new(riro[1], riro[2]),
+    }
+end
 
 local RainbowStep = 0
 local Hue = 0
@@ -125,37 +163,6 @@ local function GetTeamsString()
     return TeamList;
 end;
 
-local function FetchIcon(Name)
-    if QuorumLib.IconAssetCache[Name] then
-        return QuorumLib.IconAssetCache[Name]
-    end
-    
-    if not QuorumLib.LoadingIcons[Name] then
-        QuorumLib.LoadingIcons[Name] = true
-        task.spawn(function()
-            local rawUrl = "https://raw.githubusercontent.com/lucide-icons/lucide/main/icons/" .. Name .. ".svg"
-            local success, data = pcall(function() return game:HttpGet(rawUrl) end)
-            if success and data and #data > 0 then
-                local path = "QuorumLib/Icons"
-                if isfolder and not isfolder(path) then makefolder(path) end
-                if isfolder and not isfolder(path .. "/lucide") then makefolder(path .. "/lucide") end
-                local file = path .. "/lucide/" .. Name .. ".svg"
-                if writefile then
-                    pcall(writefile, file, data)
-                    if getcustomasset then
-                        local assetSuccess, asset = pcall(getcustomasset, file)
-                        if assetSuccess then
-                            QuorumLib.IconAssetCache[Name] = asset
-                        end
-                    end
-                end
-            end
-            QuorumLib.LoadingIcons[Name] = nil
-        end)
-    end
-    return nil
-end
-
 function QuorumLib:ParseIcon(Text)
     local iconName = string.match(Text, "<([%w%-_]+)>")
     if iconName then
@@ -163,6 +170,26 @@ function QuorumLib:ParseIcon(Text)
         return iconName, cleanText
     end
     return nil, Text
+end
+
+function QuorumLib:BuildIcon(IconName, Parent, Size, Position, AnchorPoint, ZIndex)
+    if not IconName or not QuorumLib.UseIcons then return nil end
+    local asset = GetLucideAsset(IconName)
+    if not asset then return nil end
+    local iconImage = QuorumLib:Create('ImageLabel', {
+        BackgroundTransparency = 1;
+        Position = Position or UDim2.new(0, 4, 0, 2);
+        Size = Size or UDim2.new(0, 14, 0, 14);
+        AnchorPoint = AnchorPoint or Vector2.new(0, 0);
+        Image = 'rbxassetid://' .. asset.id;
+        ImageRectOffset = asset.imageRectOffset;
+        ImageRectSize = asset.imageRectSize;
+        ImageColor3 = QuorumLib.FontColor;
+        ZIndex = ZIndex or 6;
+        Parent = Parent;
+    });
+    QuorumLib:AddToRegistry(iconImage, { ImageColor3 = 'FontColor' });
+    return iconImage
 end
 
 function QuorumLib:SafeCallback(f, ...)
@@ -1396,24 +1423,7 @@ do
         });
 
         if IconName then
-            local iconImage = QuorumLib:Create('ImageLabel', {
-                BackgroundTransparency = 1;
-                Position = UDim2.new(0, 4, 0, 2);
-                Size = UDim2.new(0, 14, 0, 14);
-                Image = QuorumLib.IconAssetCache[IconName] or "",
-                ImageColor3 = QuorumLib.FontColor,
-                ZIndex = 5;
-                Parent = Container;
-            });
-            if not QuorumLib.IconAssetCache[IconName] then
-                task.spawn(function()
-                    while not QuorumLib.IconAssetCache[IconName] do
-                        FetchIcon(IconName)
-                        task.wait(0.1)
-                    end
-                    iconImage.Image = QuorumLib.IconAssetCache[IconName]
-                end)
-            end
+            QuorumLib:BuildIcon(IconName, Container, UDim2.new(0, 14, 0, 14), UDim2.new(0, 4, 0, 2), Vector2.new(0, 0), 5)
         end
 
         if DoesWrap then
@@ -1496,25 +1506,7 @@ do
             });
 
             if IconName then
-                local iconImage = QuorumLib:Create('ImageLabel', {
-                    BackgroundTransparency = 1;
-                    Position = UDim2.new(0, 6, 0.5, 0);
-                    Size = UDim2.new(0, 14, 0, 14);
-                    AnchorPoint = Vector2.new(0, 0.5);
-                    Image = QuorumLib.IconAssetCache[IconName] or "",
-                    ImageColor3 = QuorumLib.FontColor,
-                    ZIndex = 7;
-                    Parent = Inner;
-                });
-                if not QuorumLib.IconAssetCache[IconName] then
-                    task.spawn(function()
-                        while not QuorumLib.IconAssetCache[IconName] do
-                            FetchIcon(IconName)
-                            task.wait(0.1)
-                        end
-                        iconImage.Image = QuorumLib.IconAssetCache[IconName]
-                    end)
-                end
+                QuorumLib:BuildIcon(IconName, Inner, UDim2.new(0, 14, 0, 14), UDim2.new(0, 6, 0.5, 0), Vector2.new(0, 0.5), 7)
             end
 
             QuorumLib:Create('UIGradient', {
@@ -1672,24 +1664,7 @@ do
         });
 
         if IconName then
-            local iconImage = QuorumLib:Create('ImageLabel', {
-                BackgroundTransparency = 1;
-                Position = UDim2.new(0, 4, 0, 2);
-                Size = UDim2.new(0, 14, 0, 14);
-                Image = QuorumLib.IconAssetCache[IconName] or "",
-                ImageColor3 = QuorumLib.FontColor,
-                ZIndex = 5;
-                Parent = Container;
-            });
-            if not QuorumLib.IconAssetCache[IconName] then
-                task.spawn(function()
-                    while not QuorumLib.IconAssetCache[IconName] do
-                        FetchIcon(IconName)
-                        task.wait(0.1)
-                    end
-                    iconImage.Image = QuorumLib.IconAssetCache[IconName]
-                end)
-            end
+            QuorumLib:BuildIcon(IconName, Container, UDim2.new(0, 14, 0, 14), UDim2.new(0, 4, 0, 2), Vector2.new(0, 0), 5)
         end
 
         Groupbox:AddBlank(1);
@@ -1866,25 +1841,7 @@ do
         });
 
         if IconName then
-            local iconImage = QuorumLib:Create('ImageLabel', {
-                BackgroundTransparency = 1;
-                Position = UDim2.new(0, 22, 0.5, 0);
-                Size = UDim2.new(0, 14, 0, 14);
-                AnchorPoint = Vector2.new(0, 0.5);
-                Image = QuorumLib.IconAssetCache[IconName] or "",
-                ImageColor3 = QuorumLib.FontColor,
-                ZIndex = 6;
-                Parent = ToggleContainer;
-            });
-            if not QuorumLib.IconAssetCache[IconName] then
-                task.spawn(function()
-                    while not QuorumLib.IconAssetCache[IconName] do
-                        FetchIcon(IconName)
-                        task.wait(0.1)
-                    end
-                    iconImage.Image = QuorumLib.IconAssetCache[IconName]
-                end)
-            end
+            QuorumLib:BuildIcon(IconName, ToggleContainer, UDim2.new(0, 14, 0, 14), UDim2.new(0, 22, 0.5, 0), Vector2.new(0, 0.5), 6)
         end
 
         local ToggleRegion = QuorumLib:Create('Frame', {
@@ -1986,24 +1943,7 @@ do
                 Parent = Container;
             });
             if IconName then
-                local iconImage = QuorumLib:Create('ImageLabel', {
-                    BackgroundTransparency = 1;
-                    Position = UDim2.new(0, 4, 0, 0);
-                    Size = UDim2.new(0, 14, 0, 14);
-                    Image = QuorumLib.IconAssetCache[IconName] or "",
-                    ImageColor3 = QuorumLib.FontColor,
-                    ZIndex = 5;
-                    Parent = Container;
-                });
-                if not QuorumLib.IconAssetCache[IconName] then
-                    task.spawn(function()
-                        while not QuorumLib.IconAssetCache[IconName] do
-                            FetchIcon(IconName)
-                            task.wait(0.1)
-                        end
-                        iconImage.Image = QuorumLib.IconAssetCache[IconName]
-                    end)
-                end
+                QuorumLib:BuildIcon(IconName, Container, UDim2.new(0, 14, 0, 14), UDim2.new(0, 4, 0, 0), Vector2.new(0, 0), 5)
             end
             Groupbox:AddBlank(3);
         end
@@ -2174,24 +2114,7 @@ do
                 Parent = Container;
             });
             if IconName then
-                local iconImage = QuorumLib:Create('ImageLabel', {
-                    BackgroundTransparency = 1;
-                    Position = UDim2.new(0, 4, 0, 0);
-                    Size = UDim2.new(0, 14, 0, 14);
-                    Image = QuorumLib.IconAssetCache[IconName] or "",
-                    ImageColor3 = QuorumLib.FontColor,
-                    ZIndex = 5;
-                    Parent = Container;
-                });
-                if not QuorumLib.IconAssetCache[IconName] then
-                    task.spawn(function()
-                        while not QuorumLib.IconAssetCache[IconName] do
-                            FetchIcon(IconName)
-                            task.wait(0.1)
-                        end
-                        iconImage.Image = QuorumLib.IconAssetCache[IconName]
-                    end)
-                end
+                QuorumLib:BuildIcon(IconName, Container, UDim2.new(0, 14, 0, 14), UDim2.new(0, 4, 0, 0), Vector2.new(0, 0), 5)
             end
             Groupbox:AddBlank(3);
         end
@@ -2884,6 +2807,8 @@ function QuorumLib:CreateWindow(...)
     QuorumLib.UseCustomCursor = Config.UseCustomCursor and true or false
     QuorumLib.UseIcons = Config.UseIcons
 
+    if QuorumLib.UseIcons then LoadIcons() end
+
     local BaseSize = UDim2.fromOffset(550, 600)
     if Config.Size == "Small" then
         BaseSize = UDim2.fromOffset(450, 480)
@@ -3067,25 +2992,7 @@ function QuorumLib:CreateWindow(...)
         });
 
         if IconName then
-            local iconImage = QuorumLib:Create('ImageLabel', {
-                BackgroundTransparency = 1;
-                Position = UDim2.new(0, 8, 0.5, 0);
-                Size = UDim2.new(0, 14, 0, 14);
-                AnchorPoint = Vector2.new(0, 0.5);
-                Image = QuorumLib.IconAssetCache[IconName] or "",
-                ImageColor3 = QuorumLib.FontColor,
-                ZIndex = 1;
-                Parent = TabButton;
-            });
-            if not QuorumLib.IconAssetCache[IconName] then
-                task.spawn(function()
-                    while not QuorumLib.IconAssetCache[IconName] do
-                        FetchIcon(IconName)
-                        task.wait(0.1)
-                    end
-                    iconImage.Image = QuorumLib.IconAssetCache[IconName]
-                end)
-            end
+            QuorumLib:BuildIcon(IconName, TabButton, UDim2.new(0, 14, 0, 14), UDim2.new(0, 8, 0.5, 0), Vector2.new(0, 0.5), 1)
         end
 
         local Blocker = QuorumLib:Create('Frame', {
@@ -3226,24 +3133,7 @@ function QuorumLib:CreateWindow(...)
             });
 
             if IconName then
-                local iconImage = QuorumLib:Create('ImageLabel', {
-                    BackgroundTransparency = 1;
-                    Position = UDim2.new(0, 6, 0, 4);
-                    Size = UDim2.new(0, 14, 0, 14);
-                    Image = QuorumLib.IconAssetCache[IconName] or "",
-                    ImageColor3 = QuorumLib.FontColor,
-                    ZIndex = 5;
-                    Parent = BoxInner;
-                });
-                if not QuorumLib.IconAssetCache[IconName] then
-                    task.spawn(function()
-                        while not QuorumLib.IconAssetCache[IconName] do
-                            FetchIcon(IconName)
-                            task.wait(0.1)
-                        end
-                        iconImage.Image = QuorumLib.IconAssetCache[IconName]
-                    end)
-                end
+                QuorumLib:BuildIcon(IconName, BoxInner, UDim2.new(0, 14, 0, 14), UDim2.new(0, 6, 0, 4), Vector2.new(0, 0), 5)
             end
 
             local Container = QuorumLib:Create('Frame', {
@@ -3354,25 +3244,7 @@ function QuorumLib:CreateWindow(...)
                 });
 
                 if IconName then
-                    local iconImage = QuorumLib:Create('ImageLabel', {
-                        BackgroundTransparency = 1;
-                        Position = UDim2.new(0, 6, 0.5, 0);
-                        Size = UDim2.new(0, 14, 0, 14);
-                        AnchorPoint = Vector2.new(0, 0.5);
-                        Image = QuorumLib.IconAssetCache[IconName] or "",
-                        ImageColor3 = QuorumLib.FontColor,
-                        ZIndex = 7;
-                        Parent = Button;
-                    });
-                    if not QuorumLib.IconAssetCache[IconName] then
-                        task.spawn(function()
-                            while not QuorumLib.IconAssetCache[IconName] do
-                                FetchIcon(IconName)
-                                task.wait(0.1)
-                            end
-                            iconImage.Image = QuorumLib.IconAssetCache[IconName]
-                        end)
-                    end
+                    QuorumLib:BuildIcon(IconName, Button, UDim2.new(0, 14, 0, 14), UDim2.new(0, 6, 0.5, 0), Vector2.new(0, 0.5), 7)
                 end
 
                 local Block = QuorumLib:Create('Frame', {
