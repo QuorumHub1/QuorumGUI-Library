@@ -1,4 +1,4 @@
-warn"this is new3"
+warn"4"
 local _oldQrm = getgenv and getgenv().QuorumLib
 if _oldQrm and _oldQrm.Unload then
     pcall(function() _oldQrm:Unload() end)
@@ -33,6 +33,11 @@ local function GetCursorPosition()
     return Vector2.new(Loc.X, Loc.Y)
 end
 
+local function GetGuiCursorPosition()
+    local Loc = InputService:GetMouseLocation()
+    return Vector2.new(Loc.X, Loc.Y + 36)
+end
+
 local function IsPrimaryPress(Input)
     return Input.UserInputType == Enum.UserInputType.MouseButton1
         or Input.UserInputType == Enum.UserInputType.Touch
@@ -51,19 +56,14 @@ local function IsSecondaryPress(Input)
 end
 
 local function IsPrimaryHeld()
+    if IsTouchDevice then
+        return #InputService:GetMouseLocations() > 0
+    end
     return InputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1)
-        or (#InputService:GetTouches() > 0)
 end
 
 local function LooksSynthetic(Input)
-    -- Best-effort: synthetic mouse events sent via UserInputService often carry Position == (0,0).
-    -- Real hardware clicks almost always have non-zero Position. Not perfect — see notes.
     if not Input then return false end
-    if Input.UserInputType == Enum.UserInputType.MouseButton1 or Input.UserInputType == Enum.UserInputType.MouseButton2 then
-        if Input.Position.X == 0 and Input.Position.Y == 0 then
-            return true
-        end
-    end
     return false
 end
 
@@ -88,10 +88,10 @@ local QuorumLib = {
     HudRegistry = {};
 
     FontColor = Color3.fromRGB(255, 255, 255);
-    MainColor = Color3.fromRGB(28, 28, 28);
-    BackgroundColor = Color3.fromRGB(20, 20, 20);
-    AccentColor = Color3.fromRGB(0, 85, 255);
-    OutlineColor = Color3.fromRGB(50, 50, 50);
+    MainColor = Color3.fromRGB(26, 27, 38);
+    BackgroundColor = Color3.fromRGB(22, 22, 30);
+    AccentColor = Color3.fromRGB(122, 162, 247);
+    OutlineColor = Color3.fromRGB(41, 46, 66);
     RiskColor = Color3.fromRGB(255, 50, 50),
 
     Black = Color3.new(0, 0, 0);
@@ -223,10 +223,9 @@ function QuorumLib:CreateLabel(Properties, IsHud)
 end;
 
 function QuorumLib:MakeDraggable(Instance, Cutoff)
-    Instance.Active = true
+    Instance.Active = true;
 
     local Dragging = false
-    local DragInput
     local DragStart
     local StartPosition
 
@@ -235,53 +234,59 @@ function QuorumLib:MakeDraggable(Instance, Cutoff)
             return
         end
 
-        if not Instance.Active then
-            return
+        local StartPos
+        if Input.UserInputType == Enum.UserInputType.Touch then
+            StartPos = Vector2.new(Input.Position.X, Input.Position.Y)
+        else
+            StartPos = Vector2.new(Mouse.X, Mouse.Y)
         end
 
-        local MousePosition = GetInputPosition(Input)
-        local RelativePosition = MousePosition - Instance.AbsolutePosition
+        local Relative = StartPos - Instance.AbsolutePosition
 
-        if RelativePosition.Y > (Cutoff or 40) then
+        if Relative.Y > (Cutoff or 40) then
             return
         end
 
         Dragging = true
-        DragStart = MousePosition
+        DragStart = StartPos
         StartPosition = Instance.Position
-
-        InputService.InputChanged:Connect(function(ChangeInput)
-            if ChangeInput.UserInputType == Enum.UserInputType.MouseMovement
-                or ChangeInput.UserInputType == Enum.UserInputType.Touch then
-                DragInput = ChangeInput
-            end
-        end)
     end)
 
     InputService.InputChanged:Connect(function(Input)
-        if Dragging and (
-            Input.UserInputType == Enum.UserInputType.MouseMovement
-            or Input.UserInputType == Enum.UserInputType.Touch
-        ) then
-            local Delta = GetInputPosition(Input) - DragStart
-
-            Instance.Position = UDim2.new(
-                StartPosition.X.Scale,
-                StartPosition.X.Offset + Delta.X,
-                StartPosition.Y.Scale,
-                StartPosition.Y.Offset + Delta.Y
-            )
+        if not Dragging then
+            return
         end
+
+        if Input.UserInputType ~= Enum.UserInputType.MouseMovement
+            and Input.UserInputType ~= Enum.UserInputType.Touch then
+            return
+        end
+
+        local Cur
+        if Input.UserInputType == Enum.UserInputType.Touch then
+            Cur = Vector2.new(Input.Position.X, Input.Position.Y)
+        else
+            Cur = Vector2.new(Mouse.X, Mouse.Y)
+        end
+
+        local Delta = Cur - DragStart
+
+        Instance.Position = UDim2.new(
+            StartPosition.X.Scale,
+            StartPosition.X.Offset + Delta.X,
+            StartPosition.Y.Scale,
+            StartPosition.Y.Offset + Delta.Y
+        )
     end)
 
     InputService.InputEnded:Connect(function(Input)
         if Input.UserInputType == Enum.UserInputType.MouseButton1
             or Input.UserInputType == Enum.UserInputType.Touch then
             Dragging = false
-            DragInput = nil
+            DragStart = nil
         end
     end)
-end;
+end
 
 function QuorumLib:AddToolTip(InfoStr, HoverInstance)
     local X, Y = QuorumLib:GetTextBounds(InfoStr, QuorumLib.Font, 14);
@@ -327,14 +332,12 @@ function QuorumLib:AddToolTip(InfoStr, HoverInstance)
 
         IsHovering = true
 
-        local P = GetCursorPosition()
-        Tooltip.Position = UDim2.fromOffset(P.X + 15, P.Y + 12)
+        Tooltip.Position = UDim2.fromOffset(Mouse.X + 15, Mouse.Y + 12)
         Tooltip.Visible = true
 
         while IsHovering do
             RunService.Heartbeat:Wait()
-            local C = GetCursorPosition()
-            Tooltip.Position = UDim2.fromOffset(C.X + 15, C.Y + 12)
+            Tooltip.Position = UDim2.fromOffset(Mouse.X + 15, Mouse.Y + 12)
         end
     end)
 
@@ -371,12 +374,11 @@ function QuorumLib:OnHighlight(HighlightInstance, Instance, Properties, Properti
 end;
 
 function QuorumLib:MouseIsOverOpenedFrame()
-    local M = GetCursorPosition()
     for Frame, _ in next, QuorumLib.OpenedFrames do
         local AbsPos, AbsSize = Frame.AbsolutePosition, Frame.AbsoluteSize;
 
-        if M.X >= AbsPos.X and M.X <= AbsPos.X + AbsSize.X
-            and M.Y >= AbsPos.Y and M.Y <= AbsPos.Y + AbsSize.Y then
+        if Mouse.X >= AbsPos.X and Mouse.X <= AbsPos.X + AbsSize.X
+            and Mouse.Y >= AbsPos.Y and Mouse.Y <= AbsPos.Y + AbsSize.Y then
 
             return true;
         end;
@@ -384,11 +386,10 @@ function QuorumLib:MouseIsOverOpenedFrame()
 end;
 
 function QuorumLib:IsMouseOverFrame(Frame)
-    local M = GetCursorPosition()
     local AbsPos, AbsSize = Frame.AbsolutePosition, Frame.AbsoluteSize;
 
-    if M.X >= AbsPos.X and M.X <= AbsPos.X + AbsSize.X
-        and M.Y >= AbsPos.Y and M.Y <= AbsPos.Y + AbsSize.Y then
+    if Mouse.X >= AbsPos.X and Mouse.X <= AbsPos.X + AbsSize.X
+        and Mouse.Y >= AbsPos.Y and Mouse.Y <= AbsPos.Y + AbsSize.Y then
 
         return true;
     end;
@@ -872,7 +873,6 @@ do
                 );
 
                 Button.InputBegan:Connect(function(Input)
-                    if LooksSynthetic(Input) then return end
                     if not IsPrimaryPress(Input) then
                         return
                     end
@@ -1011,10 +1011,9 @@ do
         end;
 
         SatVibMap.InputBegan:Connect(function(Input)
-            if LooksSynthetic(Input) then return end
             if not IsPrimaryPress(Input) then return end
             while IsPrimaryHeld() do
-                local M = GetCursorPosition()
+                local M = GetGuiCursorPosition()
                 local MinX = SatVibMap.AbsolutePosition.X;
                 local MaxX = MinX + SatVibMap.AbsoluteSize.X;
                 local MouseX = math.clamp(M.X, MinX, MaxX);
@@ -1034,10 +1033,9 @@ do
         end);
 
         HueSelectorInner.InputBegan:Connect(function(Input)
-            if LooksSynthetic(Input) then return end
             if not IsPrimaryPress(Input) then return end
             while IsPrimaryHeld() do
-                local M = GetCursorPosition()
+                local M = GetGuiCursorPosition()
                 local MinY = HueSelectorInner.AbsolutePosition.Y;
                 local MaxY = MinY + HueSelectorInner.AbsoluteSize.Y;
                 local MouseY = math.clamp(M.Y, MinY, MaxY);
@@ -1052,7 +1050,6 @@ do
         end);
 
         DisplayFrame.InputBegan:Connect(function(Input)
-            if LooksSynthetic(Input) then return end
             if IsPrimaryPress(Input) and not QuorumLib:MouseIsOverOpenedFrame() then
                 if PickerFrameOuter.Visible then
                     ColorPicker:Hide()
@@ -1068,10 +1065,9 @@ do
 
         if TransparencyBoxInner then
             TransparencyBoxInner.InputBegan:Connect(function(Input)
-                if LooksSynthetic(Input) then return end
                 if not IsPrimaryPress(Input) then return end
                 while IsPrimaryHeld() do
-                    local M = GetCursorPosition()
+                    local M = GetGuiCursorPosition()
                     local MinX = TransparencyBoxInner.AbsolutePosition.X;
                     local MaxX = MinX + TransparencyBoxInner.AbsoluteSize.X;
                     local MouseX = math.clamp(M.X, MinX, MaxX);
@@ -1088,9 +1084,8 @@ do
         end;
 
         QuorumLib:GiveSignal(InputService.InputBegan:Connect(function(Input)
-            if LooksSynthetic(Input) then return end
             if IsPrimaryPress(Input) then
-                local M = GetCursorPosition()
+                local M = GetGuiCursorPosition()
                 local AbsPos, AbsSize = PickerFrameOuter.AbsolutePosition, PickerFrameOuter.AbsoluteSize;
 
                 if M.X < AbsPos.X or M.X > AbsPos.X + AbsSize.X
@@ -1251,7 +1246,6 @@ do
             end;
 
             Label.InputBegan:Connect(function(Input)
-                if LooksSynthetic(Input) then return end
                 if IsPrimaryPress(Input) then
                     ModeButton:Select();
                     QuorumLib:AttemptSave();
@@ -1348,7 +1342,6 @@ do
         local Picking = false;
 
         PickOuter.InputBegan:Connect(function(Input)
-            if LooksSynthetic(Input) then return end
             if IsPrimaryPress(Input) and not QuorumLib:MouseIsOverOpenedFrame() then
                 Picking = true;
 
@@ -1407,7 +1400,6 @@ do
         end);
 
         QuorumLib:GiveSignal(InputService.InputBegan:Connect(function(Input)
-            if LooksSynthetic(Input) then return end
             if (not Picking) then
                 if KeyPicker.Mode == 'Toggle' then
                     local Key = KeyPicker.Value;
@@ -1430,7 +1422,7 @@ do
             end;
 
             if IsPrimaryPress(Input) then
-                local M = GetCursorPosition()
+                local M = GetGuiCursorPosition()
                 local AbsPos, AbsSize = ModeSelectOuter.AbsolutePosition, ModeSelectOuter.AbsoluteSize;
 
                 if M.X < AbsPos.X or M.X > AbsPos.X + AbsSize.X
@@ -1623,10 +1615,6 @@ do
             end
 
             local function ValidateClick(Input)
-                if LooksSynthetic(Input) then
-                    return false
-                end
-
                 if QuorumLib:MouseIsOverOpenedFrame() then
                     return false
                 end
@@ -2056,7 +2044,6 @@ do
         end;
 
         ToggleRegion.InputBegan:Connect(function(Input)
-            if LooksSynthetic(Input) then return end
             if IsPrimaryPress(Input) and not QuorumLib:MouseIsOverOpenedFrame() then
                 Toggle:SetValue(not Toggle.Value) -- Why was it not like this from the start?
                 QuorumLib:AttemptSave();
@@ -2244,14 +2231,13 @@ do
         end;
 
         SliderInner.InputBegan:Connect(function(Input)
-            if LooksSynthetic(Input) then return end
             if IsPrimaryPress(Input) and not QuorumLib:MouseIsOverOpenedFrame() then
                 local mPos = GetInputPosition(Input).X;
                 local gPos = Fill.Size.X.Offset;
                 local Diff = mPos - (Fill.AbsolutePosition.X + gPos);
 
                 while IsPrimaryHeld() do
-                    local nMPos = GetCursorPosition().X;
+                    local nMPos = GetGuiCursorPosition().X;
                     local nX = math.clamp(gPos + (nMPos - mPos) + Diff, 0, Slider.MaxSize);
 
                     local nValue = Slider:GetValueFromXOffset(nX);
@@ -2561,7 +2547,6 @@ do
                 end;
 
                 ButtonLabel.InputBegan:Connect(function(Input)
-                    if LooksSynthetic(Input) then return end
                     if IsPrimaryPress(Input) then
                         local Try = not Selected;
 
@@ -2663,7 +2648,6 @@ do
         end;
 
         DropdownOuter.InputBegan:Connect(function(Input)
-            if LooksSynthetic(Input) then return end
             if IsPrimaryPress(Input) and not QuorumLib:MouseIsOverOpenedFrame() then
                 if ListOuter.Visible then
                     Dropdown:CloseDropdown();
@@ -2674,9 +2658,8 @@ do
         end);
 
         InputService.InputBegan:Connect(function(Input)
-            if LooksSynthetic(Input) then return end
             if IsPrimaryPress(Input) then
-                local M = GetCursorPosition()
+                local M = GetGuiCursorPosition()
                 local AbsPos, AbsSize = ListOuter.AbsolutePosition, ListOuter.AbsoluteSize;
 
                 if M.X < AbsPos.X or M.X > AbsPos.X + AbsSize.X
@@ -3610,7 +3593,6 @@ function QuorumLib:CreateWindow(...)
                 end;
 
                 Button.InputBegan:Connect(function(Input)
-                    if LooksSynthetic(Input) then return end
                     if IsPrimaryPress(Input) and not QuorumLib:MouseIsOverOpenedFrame() then
                         Tab:Show();
                         Tab:Resize();
@@ -3647,7 +3629,6 @@ function QuorumLib:CreateWindow(...)
         end;
 
         TabButton.InputBegan:Connect(function(Input)
-            if LooksSynthetic(Input) then return end
             if IsPrimaryPress(Input) then
                 Tab:ShowTab();
             end
@@ -3773,7 +3754,6 @@ function QuorumLib:CreateWindow(...)
     end
 
     QuorumLib:GiveSignal(InputService.InputBegan:Connect(function(Input, Processed)
-        if LooksSynthetic(Input) then return end
         if type(QuorumLib.ToggleKeybind) == 'table' and QuorumLib.ToggleKeybind.Type == 'KeyPicker' then
             if Input.UserInputType == Enum.UserInputType.Keyboard and Input.KeyCode.Name == QuorumLib.ToggleKeybind.Value then
                 task.spawn(QuorumLib.Toggle)
