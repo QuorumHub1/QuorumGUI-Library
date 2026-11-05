@@ -1,4 +1,4 @@
-warn"sdsfdsfsdffsddsffdfdjkdsffhjksfhjkhsdkjfhjksdfhkjsdhjkfsdhjkfkjdfhjksdfffddfs"
+warn"c"
 local _oldQrm = getgenv and getgenv().QuorumLib
 if _oldQrm and _oldQrm.Unload then
     pcall(function() _oldQrm:Unload() end)
@@ -2430,10 +2430,10 @@ do
         return Area;
     end
 
-    QuorumLib.NotificationAreas.TopLeft = CreateNotificationArea(UDim2.new(0, 10, 0, 60), UDim2.new(0, 300, 0, 200), Vector2.new(0, 0))
-    QuorumLib.NotificationAreas.TopRight = CreateNotificationArea(UDim2.new(1, -10, 0, 60), UDim2.new(0, 300, 0, 200), Vector2.new(1, 0))
-    QuorumLib.NotificationAreas.BottomLeft = CreateNotificationArea(UDim2.new(0, 10, 1, -10), UDim2.new(0, 300, 0, 200), Vector2.new(0, 1), 'BottomLeft')
-    QuorumLib.NotificationAreas.BottomRight = CreateNotificationArea(UDim2.new(1, -10, 1, -10), UDim2.new(0, 300, 0, 200), Vector2.new(1, 1), 'BottomRight')
+    QuorumLib.NotificationAreas.TopLeft = CreateNotificationArea(UDim2.new(0, 10, 0, 60), UDim2.fromOffset(300, 400), Vector2.new(0, 0))
+    QuorumLib.NotificationAreas.TopRight = CreateNotificationArea(UDim2.new(1, -10, 0, 60), UDim2.fromOffset(300, 400), Vector2.new(1, 0))
+    QuorumLib.NotificationAreas.BottomLeft = CreateNotificationArea(UDim2.new(0, 10, 1, -50), UDim2.fromOffset(300, 400), Vector2.new(0, 1), 'BottomLeft')
+    QuorumLib.NotificationAreas.BottomRight = CreateNotificationArea(UDim2.new(1, -10, 1, -50), UDim2.fromOffset(300, 400), Vector2.new(1, 1), 'BottomRight')
     
     QuorumLib.NotificationArea = QuorumLib.NotificationAreas.TopLeft
 
@@ -2577,9 +2577,8 @@ function QuorumLib:Notify(Text, Time, Position)
     YSize = YSize + 7
 
     local TargetArea = QuorumLib.NotificationAreas[Position or 'TopLeft'] or QuorumLib.NotificationAreas.TopLeft
-    
     local isRight = (Position == 'TopRight' or Position == 'BottomRight')
-    
+
     local NotifyOuter = QuorumLib:Create('Frame', {
         BorderColor3 = Color3.new(0, 0, 0);
         AnchorPoint = isRight and Vector2.new(1, 0) or Vector2.new(0, 0);
@@ -2632,7 +2631,7 @@ function QuorumLib:Notify(Text, Time, Position)
         Position = UDim2.new(0, 4, 0, 0);
         Size = UDim2.new(1, -4, 1, 0);
         Text = Text;
-        TextXAlignment = Enum.TextXAlignment.Left;
+        TextXAlignment = isRight and Enum.TextXAlignment.Right or Enum.TextXAlignment.Left;
         TextSize = 14;
         ZIndex = 103;
         Parent = InnerFrame;
@@ -2641,7 +2640,7 @@ function QuorumLib:Notify(Text, Time, Position)
     local LeftColor = QuorumLib:Create('Frame', {
         BackgroundColor3 = QuorumLib.AccentColor;
         BorderSizePixel = 0;
-        Position = UDim2.new(0, -1, 0, -1);
+        Position = isRight and UDim2.new(1, -2, 0, -1) or UDim2.new(0, -1, 0, -1);
         Size = UDim2.new(0, 3, 1, 2);
         ZIndex = 104;
         Parent = NotifyOuter;
@@ -2649,7 +2648,7 @@ function QuorumLib:Notify(Text, Time, Position)
 
     QuorumLib:AddToRegistry(LeftColor, { BackgroundColor3 = 'AccentColor'; }, true);
 
-    pcall(NotifyOuter.TweenSize, NotifyOuter, UDim2.new(0, XSize + 8 + 4, 0, YSize), 'Out', 'Quad', 0.4, true);
+    pcall(NotifyOuter.TweenSize, NotifyOuter, UDim2.new(0, XSize + 12, 0, YSize), 'Out', 'Quad', 0.4, true);
 
     task.spawn(function()
         wait(Time or 5);
