@@ -1,4 +1,4 @@
-warn"eds"
+warn"edds"
 local _oldQrm = getgenv and getgenv().QuorumLib
 if _oldQrm and _oldQrm.Unload then
     pcall(function() _oldQrm:Unload() end)
@@ -1806,6 +1806,8 @@ do
         setmetatable(Toggle, BaseAddons);
         Toggles[Idx] = Toggle;
         QuorumLib:UpdateDependencyBoxes();
+        Toggle:SetValue(Toggle.Value);
+
         return Toggle;
     end;
 
