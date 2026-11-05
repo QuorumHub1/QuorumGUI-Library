@@ -1,4 +1,3 @@
-warn"edds"
 local _oldQrm = getgenv and getgenv().QuorumLib
 if _oldQrm and _oldQrm.Unload then
     pcall(function() _oldQrm:Unload() end)
@@ -84,6 +83,7 @@ local QuorumLib = {
     CursorOutlineDrawing = nil;
     MenuToggled = false;
     UnlockCamera = true;
+    NotificationAreas = {};
 };
 
 local RainbowStep = 0
@@ -1706,7 +1706,7 @@ do
 
         local Groupbox = self;
         local Container = Groupbox.Container;
-        
+
         local ToggleContainer = QuorumLib:Create('Frame', {
             BackgroundTransparency = 1;
             Size = UDim2.new(1, 0, 0, 13);
@@ -2405,20 +2405,35 @@ end;
 
 -- < Create other UI elements >
 do
-    QuorumLib.NotificationArea = QuorumLib:Create('Frame', {
-        BackgroundTransparency = 1;
-        Position = UDim2.new(0, 0, 0, 40);
-        Size = UDim2.new(0, 300, 0, 200);
-        ZIndex = 100;
-        Parent = ScreenGui;
-    });
+    local function CreateNotificationArea(Position, Size, LayoutOrder)
+        local Area = QuorumLib:Create('Frame', {
+            BackgroundTransparency = 1;
+            Position = Position;
+            Size = Size;
+            ZIndex = 100;
+            Parent = ScreenGui;
+        });
 
-    QuorumLib:Create('UIListLayout', {
-        Padding = UDim.new(0, 4);
-        FillDirection = Enum.FillDirection.Vertical;
-        SortOrder = Enum.SortOrder.LayoutOrder;
-        Parent = QuorumLib.NotificationArea;
-    });
+        local Layout = QuorumLib:Create('UIListLayout', {
+            Padding = UDim.new(0, 4);
+            FillDirection = Enum.FillDirection.Vertical;
+            SortOrder = Enum.SortOrder.LayoutOrder;
+            Parent = Area;
+        });
+
+        if LayoutOrder == 'BottomLeft' or LayoutOrder == 'BottomRight' then
+            Layout.VerticalAlignment = Enum.VerticalAlignment.Bottom;
+        end
+
+        return Area;
+    end
+
+    QuorumLib.NotificationAreas.TopLeft = CreateNotificationArea(UDim2.new(0, 0, 0, 40), UDim2.new(0, 300, 0, 200))
+    QuorumLib.NotificationAreas.TopRight = CreateNotificationArea(UDim2.new(1, -300, 0, 40), UDim2.new(0, 300, 0, 200))
+    QuorumLib.NotificationAreas.BottomLeft = CreateNotificationArea(UDim2.new(0, 0, 1, -200), UDim2.new(0, 300, 0, 200), 'BottomLeft')
+    QuorumLib.NotificationAreas.BottomRight = CreateNotificationArea(UDim2.new(1, -300, 1, -200), UDim2.new(0, 300, 0, 200), 'BottomRight')
+    
+    QuorumLib.NotificationArea = QuorumLib.NotificationAreas.TopLeft
 
     local WatermarkOuter = QuorumLib:Create('Frame', {
         BorderColor3 = Color3.new(0, 0, 0);
@@ -2555,17 +2570,19 @@ function QuorumLib:SetWatermark(Text)
     QuorumLib.WatermarkText.Text = Text;
 end;
 
-function QuorumLib:Notify(Text, Time)
+function QuorumLib:Notify(Text, Time, Position)
     local XSize, YSize = QuorumLib:GetTextBounds(Text, QuorumLib.Font, 14);
     YSize = YSize + 7
 
+    local TargetArea = QuorumLib.NotificationAreas[Position or 'TopLeft'] or QuorumLib.NotificationAreas.TopLeft
+
     local NotifyOuter = QuorumLib:Create('Frame', {
         BorderColor3 = Color3.new(0, 0, 0);
-        Position = UDim2.new(0, 100, 0, 10);
+        Position = UDim2.new(0, 0, 0, 0);
         Size = UDim2.new(0, 0, 0, YSize);
         ClipsDescendants = true;
         ZIndex = 100;
-        Parent = QuorumLib.NotificationArea;
+        Parent = TargetArea;
     });
 
     local NotifyInner = QuorumLib:Create('Frame', {
