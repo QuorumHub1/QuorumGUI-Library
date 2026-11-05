@@ -3129,7 +3129,6 @@ function QuorumLib:CreateWindow(...)
         ScrollBarThickness = IsMobile and 2 or 3;
         ScrollBarImageColor3 = QuorumLib.AccentColor;
         ScrollingDirection = Enum.ScrollingDirection.X;
-        Elasticity = 0;
         ZIndex = 1;
         Parent = MainSectionInner;
     });
