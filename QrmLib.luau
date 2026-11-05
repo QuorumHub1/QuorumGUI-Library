@@ -1,4 +1,4 @@
-print"hi"
+print"hiр"
 local _oldQrm = getgenv and getgenv().QuorumLib
 if _oldQrm and _oldQrm.Unload then
     pcall(function() _oldQrm:Unload() end)
