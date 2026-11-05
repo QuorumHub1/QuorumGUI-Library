@@ -13,6 +13,7 @@ local TweenService = game:GetService('TweenService');
 local RenderStepped = RunService.RenderStepped;
 local LocalPlayer = Players.LocalPlayer;
 local Mouse = LocalPlayer:GetMouse();
+local HttpService = game:GetService('HttpService');
 
 local ProtectGui = protectgui or (syn and syn.protect_gui) or (function() end);
 
@@ -84,6 +85,10 @@ local QuorumLib = {
     MenuToggled = false;
     UnlockCamera = true;
     NotificationAreas = {};
+    UseIcons = false;
+    IconCache = {};
+    IconAssetCache = {};
+    LoadingIcons = {};
 };
 
 local RainbowStep = 0
@@ -117,6 +122,46 @@ local function GetTeamsString()
     table.sort(TeamList, function(str1, str2) return str1 < str2 end);
     return TeamList;
 end;
+
+local function FetchIcon(Name)
+    if QuorumLib.IconAssetCache[Name] then
+        return QuorumLib.IconAssetCache[Name]
+    end
+    
+    if not QuorumLib.LoadingIcons[Name] then
+        QuorumLib.LoadingIcons[Name] = true
+        task.spawn(function()
+            local rawUrl = "https://raw.githubusercontent.com/lucide-icons/lucide/main/icons/" .. Name .. ".svg"
+            local success, data = pcall(function() return game:HttpGet(rawUrl) end)
+            if success and data and #data > 0 then
+                local path = "QuorumLib/Icons"
+                if isfolder and not isfolder(path) then makefolder(path) end
+                if isfolder and not isfolder(path .. "/lucide") then makefolder(path .. "/lucide") end
+                local file = path .. "/lucide/" .. Name .. ".svg"
+                if writefile then
+                    pcall(writefile, file, data)
+                    if getcustomasset then
+                        local assetSuccess, asset = pcall(getcustomasset, file)
+                        if assetSuccess then
+                            QuorumLib.IconAssetCache[Name] = asset
+                        end
+                    end
+                end
+            end
+            QuorumLib.LoadingIcons[Name] = nil
+        end)
+    end
+    return nil
+end
+
+function QuorumLib:ParseIcon(Text)
+    local iconName = string.match(Text, "<([%w%-_]+)>")
+    if iconName then
+        local cleanText = string.gsub(Text, "<" .. iconName .. ">%s*", "")
+        return iconName, cleanText
+    end
+    return nil, Text
+end
 
 function QuorumLib:SafeCallback(f, ...)
     if (not f) then return; end;
@@ -2414,6 +2459,14 @@ do
             Parent = ScreenGui;
         });
 
+        QuorumLib:Create('UIPadding', {
+            PaddingTop = UDim.new(0, 60);
+            PaddingBottom = UDim.new(0, 50);
+            PaddingLeft = UDim.new(0, 10);
+            PaddingRight = UDim.new(0, 10);
+            Parent = Area;
+        });
+
         local Layout = QuorumLib:Create('UIListLayout', {
             Padding = UDim.new(0, 4);
             FillDirection = Enum.FillDirection.Vertical;
@@ -2436,10 +2489,10 @@ do
         return Area;
     end
 
-    QuorumLib.NotificationAreas.TopLeft = CreateNotificationArea(UDim2.new(0, 10, 0, 60), Vector2.new(0, 0))
-    QuorumLib.NotificationAreas.TopRight = CreateNotificationArea(UDim2.new(1, -10, 0, 60), Vector2.new(1, 0), 'TopRight')
-    QuorumLib.NotificationAreas.BottomLeft = CreateNotificationArea(UDim2.new(0, 10, 1, -50), Vector2.new(0, 1), 'BottomLeft')
-    QuorumLib.NotificationAreas.BottomRight = CreateNotificationArea(UDim2.new(1, -10, 1, -50), Vector2.new(1, 1), 'BottomRight')
+    QuorumLib.NotificationAreas.TopLeft = CreateNotificationArea(UDim2.new(0, 0, 0, 0), Vector2.new(0, 0))
+    QuorumLib.NotificationAreas.TopRight = CreateNotificationArea(UDim2.new(1, 0, 0, 0), Vector2.new(1, 0), 'TopRight')
+    QuorumLib.NotificationAreas.BottomLeft = CreateNotificationArea(UDim2.new(0, 0, 1, 0), Vector2.new(0, 1), 'BottomLeft')
+    QuorumLib.NotificationAreas.BottomRight = CreateNotificationArea(UDim2.new(1, 0, 1, 0), Vector2.new(1, 1), 'BottomRight')
     
     QuorumLib.NotificationArea = QuorumLib.NotificationAreas.TopLeft
 
@@ -2579,7 +2632,13 @@ function QuorumLib:SetWatermark(Text)
 end;
 
 function QuorumLib:Notify(Text, Time, Position)
+    local ViewportWidth = workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize.X or 1920
+    local MaxNotifyWidth = math.min(350, ViewportWidth * 0.8)
+    
     local XSize, YSize = QuorumLib:GetTextBounds(Text, QuorumLib.Font, 14);
+    if XSize > MaxNotifyWidth then
+        XSize = MaxNotifyWidth
+    end
     YSize = YSize + 7
 
     local TargetArea = QuorumLib.NotificationAreas[Position or 'TopLeft'] or QuorumLib.NotificationAreas.TopLeft
@@ -2679,7 +2738,10 @@ function QuorumLib:CreateWindow(...)
     if type(Config.TabPadding) ~= 'number' then Config.TabPadding = 4 end
     if type(Config.MenuFadeTime) ~= 'number' then Config.MenuFadeTime = 0.2 end
     if Config.UseCustomCursor == nil then Config.UseCustomCursor = true end
+    if Config.UseIcons == nil then Config.UseIcons = false end
+    
     QuorumLib.UseCustomCursor = Config.UseCustomCursor and true or false
+    QuorumLib.UseIcons = Config.UseIcons
 
     local BaseSize = UDim2.fromOffset(550, 600)
     if Config.Size == "Small" then
@@ -2836,17 +2898,18 @@ function QuorumLib:CreateWindow(...)
     end
 
     function Window:AddTab(Name)
+        local IconName, CleanName = QuorumLib:ParseIcon(Name)
         local Tab = {
             Groupboxes = {};
             Tabboxes = {};
         };
 
-        local TabButtonWidth = QuorumLib:GetTextBounds(Name, QuorumLib.Font, 16);
+        local TabButtonWidth = QuorumLib:GetTextBounds(CleanName, QuorumLib.Font, 16);
 
         local TabButton = QuorumLib:Create('Frame', {
             BackgroundColor3 = QuorumLib.BackgroundColor;
             BorderColor3 = QuorumLib.OutlineColor;
-            Size = UDim2.new(0, TabButtonWidth + 8 + 4, 1, 0);
+            Size = UDim2.new(0, TabButtonWidth + (IconName and 32 or 12), 1, 0);
             ZIndex = 1;
             Parent = TabArea;
         });
@@ -2854,12 +2917,35 @@ function QuorumLib:CreateWindow(...)
         QuorumLib:AddToRegistry(TabButton, { BackgroundColor3 = 'BackgroundColor'; BorderColor3 = 'OutlineColor'; });
 
         local TabButtonLabel = QuorumLib:CreateLabel({
-            Position = UDim2.new(0, 0, 0, 0);
-            Size = UDim2.new(1, 0, 1, -1);
-            Text = Name;
+            Position = UDim2.new(0, IconName and 28 or 0, 0, 0);
+            Size = UDim2.new(1, IconName and -28 or 0, 1, -1);
+            Text = CleanName;
+            TextXAlignment = IconName and Enum.TextXAlignment.Left or Enum.TextXAlignment.Center;
             ZIndex = 1;
             Parent = TabButton;
         });
+
+        if IconName then
+            local iconImage = QuorumLib:Create('ImageLabel', {
+                BackgroundTransparency = 1;
+                Position = UDim2.new(0, 8, 0.5, 0);
+                Size = UDim2.new(0, 14, 0, 14);
+                AnchorPoint = Vector2.new(0, 0.5);
+                Image = QuorumLib.IconAssetCache[IconName] or "",
+                ImageColor3 = QuorumLib.FontColor,
+                ZIndex = 1;
+                Parent = TabButton;
+            });
+            if not QuorumLib.IconAssetCache[IconName] then
+                task.spawn(function()
+                    while not QuorumLib.IconAssetCache[IconName] do
+                        FetchIcon(IconName)
+                        task.wait(0.1)
+                    end
+                    iconImage.Image = QuorumLib.IconAssetCache[IconName]
+                end)
+            end
+        end
 
         local Blocker = QuorumLib:Create('Frame', {
             BackgroundColor3 = QuorumLib.MainColor;
@@ -2954,6 +3040,7 @@ function QuorumLib:CreateWindow(...)
         end;
 
         function Tab:AddGroupbox(Info)
+            local IconName, CleanName = QuorumLib:ParseIcon(Info.Name)
             local Groupbox = {};
             local BoxOuter = QuorumLib:Create('Frame', {
                 BackgroundColor3 = QuorumLib.BackgroundColor;
@@ -2988,14 +3075,35 @@ function QuorumLib:CreateWindow(...)
             QuorumLib:AddToRegistry(Highlight, { BackgroundColor3 = 'AccentColor'; });
 
             local GroupboxLabel = QuorumLib:CreateLabel({
-                Size = UDim2.new(1, 0, 0, 18);
-                Position = UDim2.new(0, 4, 0, 2);
+                Size = UDim2.new(1, IconName and -24 or 0, 0, 18);
+                Position = UDim2.new(0, IconName and 24 or 4, 0, 2);
                 TextSize = 14;
-                Text = Info.Name;
+                Text = CleanName;
                 TextXAlignment = Enum.TextXAlignment.Left;
                 ZIndex = 5;
                 Parent = BoxInner;
             });
+
+            if IconName then
+                local iconImage = QuorumLib:Create('ImageLabel', {
+                    BackgroundTransparency = 1;
+                    Position = UDim2.new(0, 6, 0, 4);
+                    Size = UDim2.new(0, 14, 0, 14);
+                    Image = QuorumLib.IconAssetCache[IconName] or "",
+                    ImageColor3 = QuorumLib.FontColor,
+                    ZIndex = 5;
+                    Parent = BoxInner;
+                });
+                if not QuorumLib.IconAssetCache[IconName] then
+                    task.spawn(function()
+                        while not QuorumLib.IconAssetCache[IconName] do
+                            FetchIcon(IconName)
+                            task.wait(0.1)
+                        end
+                        iconImage.Image = QuorumLib.IconAssetCache[IconName]
+                    end)
+                end
+            end
 
             local Container = QuorumLib:Create('Frame', {
                 BackgroundTransparency = 1;
@@ -3082,6 +3190,7 @@ function QuorumLib:CreateWindow(...)
             });
 
             function Tabbox:AddTab(Name)
+                local IconName, CleanName = QuorumLib:ParseIcon(Name)
                 local Tab = {};
                 local Button = QuorumLib:Create('Frame', {
                     BackgroundColor3 = QuorumLib.MainColor;
@@ -3094,13 +3203,36 @@ function QuorumLib:CreateWindow(...)
                 QuorumLib:AddToRegistry(Button, { BackgroundColor3 = 'MainColor'; });
 
                 local ButtonLabel = QuorumLib:CreateLabel({
-                    Size = UDim2.new(1, 0, 1, 0);
+                    Size = UDim2.new(1, IconName and -24 or 0, 1, 0);
+                    Position = UDim2.new(0, IconName and 24 or 0, 0, 0);
                     TextSize = 14;
-                    Text = Name;
+                    Text = CleanName;
                     TextXAlignment = Enum.TextXAlignment.Center;
                     ZIndex = 7;
                     Parent = Button;
                 });
+
+                if IconName then
+                    local iconImage = QuorumLib:Create('ImageLabel', {
+                        BackgroundTransparency = 1;
+                        Position = UDim2.new(0, 6, 0.5, 0);
+                        Size = UDim2.new(0, 14, 0, 14);
+                        AnchorPoint = Vector2.new(0, 0.5);
+                        Image = QuorumLib.IconAssetCache[IconName] or "",
+                        ImageColor3 = QuorumLib.FontColor,
+                        ZIndex = 7;
+                        Parent = Button;
+                    });
+                    if not QuorumLib.IconAssetCache[IconName] then
+                        task.spawn(function()
+                            while not QuorumLib.IconAssetCache[IconName] do
+                                FetchIcon(IconName)
+                                task.wait(0.1)
+                            end
+                            iconImage.Image = QuorumLib.IconAssetCache[IconName]
+                        end)
+                    end
+                end
 
                 local Block = QuorumLib:Create('Frame', {
                     BackgroundColor3 = QuorumLib.BackgroundColor;
