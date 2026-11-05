@@ -1,4 +1,3 @@
-warn"c"
 local _oldQrm = getgenv and getgenv().QuorumLib
 if _oldQrm and _oldQrm.Unload then
     pcall(function() _oldQrm:Unload() end)
@@ -1269,7 +1268,7 @@ do
                 end);
             elseif IsSecondaryPress(Input) and not QuorumLib:MouseIsOverOpenedFrame() then
                 ModeSelectOuter.Visible = true;
-            end;
+            end
         end);
 
         QuorumLib:GiveSignal(InputService.InputBegan:Connect(function(Input)
@@ -2014,7 +2013,7 @@ do
         for _, Element in next, Container:GetChildren() do
             if not Element:IsA('UIListLayout') then
                 RelativeOffset = RelativeOffset + Element.Size.Y.Offset;
-            end;
+            end
         end;
 
         local DropdownOuter = QuorumLib:Create('Frame', {
@@ -2284,7 +2283,7 @@ do
             if IsPrimaryPress(Input) and not QuorumLib:MouseIsOverOpenedFrame() then
                 if ListOuter.Visible then Dropdown:CloseDropdown();
                 else Dropdown:OpenDropdown(); end
-            end;
+            end
         end);
 
         InputService.InputBegan:Connect(function(Input)
@@ -2295,7 +2294,7 @@ do
                     or M.Y < (AbsPos.Y - 20 - 1) or M.Y > AbsPos.Y + AbsSize.Y then
                     Dropdown:CloseDropdown();
                 end
-            end;
+            end
         end);
 
         Dropdown:BuildDropdownList();
@@ -2376,7 +2375,7 @@ do
                     Holder.Visible = false;
                     Depbox:Resize();
                     return;
-                end
+                end;
             end
             Holder.Visible = true;
             Depbox:Resize();
@@ -2404,7 +2403,6 @@ do
     end;
 end;
 
--- < Create other UI elements >
 do
     local function CreateNotificationArea(Position, Size, AnchorPoint, LayoutOrder)
         local Area = QuorumLib:Create('Frame', {
@@ -2631,7 +2629,7 @@ function QuorumLib:Notify(Text, Time, Position)
         Position = UDim2.new(0, 4, 0, 0);
         Size = UDim2.new(1, -4, 1, 0);
         Text = Text;
-        TextXAlignment = isRight and Enum.TextXAlignment.Right or Enum.TextXAlignment.Left;
+        TextXAlignment = Enum.TextXAlignment.Left;
         TextSize = 14;
         ZIndex = 103;
         Parent = InnerFrame;
@@ -2640,7 +2638,7 @@ function QuorumLib:Notify(Text, Time, Position)
     local LeftColor = QuorumLib:Create('Frame', {
         BackgroundColor3 = QuorumLib.AccentColor;
         BorderSizePixel = 0;
-        Position = isRight and UDim2.new(1, -2, 0, -1) or UDim2.new(0, -1, 0, -1);
+        Position = UDim2.new(0, -1, 0, -1);
         Size = UDim2.new(0, 3, 1, 2);
         ZIndex = 104;
         Parent = NotifyOuter;
@@ -2648,7 +2646,7 @@ function QuorumLib:Notify(Text, Time, Position)
 
     QuorumLib:AddToRegistry(LeftColor, { BackgroundColor3 = 'AccentColor'; }, true);
 
-    pcall(NotifyOuter.TweenSize, NotifyOuter, UDim2.new(0, XSize + 12, 0, YSize), 'Out', 'Quad', 0.4, true);
+    pcall(NotifyOuter.TweenSize, NotifyOuter, UDim2.new(0, XSize + 8 + 4, 0, YSize), 'Out', 'Quad', 0.4, true);
 
     task.spawn(function()
         wait(Time or 5);
