@@ -3015,6 +3015,24 @@ function QuorumLib:CreateWindow(...)
         Parent = Inner;
     });
 
+    if Config.Title and Config.Title ~= '' then
+        local titleSegments = ParseSegments(Config.Title)
+        local titleIconCount = CountValidIcons(titleSegments)
+        if titleIconCount > 0 then
+            WindowLabel.Visible = false
+            local TitleRow = QuorumLib:Create('Frame', {
+                BackgroundTransparency = 1;
+                Name = 'TitleRow';
+                Position = UDim2.new(0, 7, 0, 0);
+                Size = UDim2.new(0, 0, 0, 25);
+                ZIndex = 1;
+                Parent = Inner;
+            });
+            BuildRow(titleSegments, TitleRow, 5, 1, 16)
+            TitleRow.Size = UDim2.new(0, TitleRow.UIListLayout.AbsoluteContentSize.X, 0, 25)
+        end
+    end
+
     local MainSectionOuter = QuorumLib:Create('Frame', {
         BackgroundColor3 = QuorumLib.BackgroundColor;
         BorderColor3 = QuorumLib.OutlineColor;
@@ -3080,7 +3098,27 @@ function QuorumLib:CreateWindow(...)
     QuorumLib:AddToRegistry(TabContainer, { BackgroundColor3 = 'MainColor'; BorderColor3 = 'OutlineColor'; });
 
     function Window:SetWindowTitle(Title)
-        WindowLabel.Text = Title;
+        WindowLabel.Text = GetCleanText(ParseSegments(Title));
+        WindowLabel.Position = UDim2.new(0, 7, 0, 0);
+        local existingRow = Inner:FindFirstChild('TitleRow')
+        if existingRow then existingRow:Destroy() end
+        local titleSegments = ParseSegments(Title)
+        local titleIconCount = CountValidIcons(titleSegments)
+        if titleIconCount > 0 then
+            WindowLabel.Visible = false
+            local TitleRow = QuorumLib:Create('Frame', {
+                BackgroundTransparency = 1;
+                Name = 'TitleRow';
+                Position = UDim2.new(0, 7, 0, 0);
+                Size = UDim2.new(0, 0, 0, 25);
+                ZIndex = 1;
+                Parent = Inner;
+            });
+            BuildRow(titleSegments, TitleRow, 5, 1, 16)
+            TitleRow.Size = UDim2.new(0, TitleRow.UIListLayout.AbsoluteContentSize.X, 0, 25)
+        else
+            WindowLabel.Visible = true
+        end
     end;
 
     function Window:SetSize(NewSize)
