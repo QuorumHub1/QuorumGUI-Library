@@ -1,4 +1,3 @@
-print"hi2"
 local _oldQrm = getgenv and getgenv().QuorumLib
 if _oldQrm and _oldQrm.Unload then
     pcall(function() _oldQrm:Unload() end)
@@ -83,7 +82,7 @@ local QuorumLib = {
     CursorDrawing = nil;
     CursorOutlineDrawing = nil;
     MenuToggled = false;
-    FixFirstPerson = true;
+    UnlockCamera = true; -- Переименовано из FixFirstPerson
 };
 
 local RainbowStep = 0
@@ -389,8 +388,13 @@ local function SpawnCustomCursor()
         while QuorumLib.MenuToggled and QuorumLib.UseCustomCursor and ScreenGui.Parent do
             InputService.MouseIconEnabled = false;
             
-            if QuorumLib.FixFirstPerson then
-                InputService.MouseBehavior = Enum.MouseBehavior.Default
+            if QuorumLib.UnlockCamera then
+                local isFirstPerson = LocalPlayer.CameraMode == Enum.CameraMode.LockFirstPerson
+                local isShiftLock = InputService.MouseBehavior == Enum.MouseBehavior.LockCenter
+                
+                if isFirstPerson or isShiftLock then
+                    InputService.MouseBehavior = Enum.MouseBehavior.Default
+                end
             end
             
             local mPos = InputService:GetMouseLocation();
@@ -1724,7 +1728,7 @@ do
 
         local ToggleLabel = QuorumLib:CreateLabel({
             Size = UDim2.new(1, -34, 1, 0);
-            Position = UDim2.new(0, 34, 0, 0);
+            Position = UDim2.new(0, 34, 0, 0); -- СДВИГ ВПРАВО НА 34 ПИКСЕЛЯ
             TextSize = 14;
             Text = Info.Text;
             TextXAlignment = Enum.TextXAlignment.Left;
