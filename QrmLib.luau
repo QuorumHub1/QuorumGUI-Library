@@ -1,4 +1,3 @@
-warn("i love u")
 local _oldQrm = getgenv and getgenv().QuorumLib
 if _oldQrm and _oldQrm.Unload then
     pcall(function() _oldQrm:Unload() end)
@@ -83,7 +82,6 @@ local QuorumLib = {
     CursorDrawing = nil;
     CursorOutlineDrawing = nil;
     MenuToggled = false;
-    FixFirstPerson = true;
 };
 
 local RainbowStep = 0
@@ -368,7 +366,7 @@ function QuorumLib:GiveSignal(Signal)
     table.insert(QuorumLib.Signals, Signal)
 end
 
--- ИСПРАВЛЕННЫЙ КУРСОР (с поддержкой FixFirstPerson)
+-- ИСПРАВЛЕННЫЙ КУРСОР (включая обход LockCenter)
 local function SpawnCustomCursor()
     if QuorumLib.CursorThread then return end
     if IsTouchDevice then return end
@@ -389,10 +387,7 @@ local function SpawnCustomCursor()
     QuorumLib.CursorThread = task.spawn(function()
         while QuorumLib.MenuToggled and QuorumLib.UseCustomCursor and ScreenGui.Parent do
             InputService.MouseIconEnabled = false;
-            
-            if QuorumLib.FixFirstPerson then
-                InputService.MouseBehavior = Enum.MouseBehavior.Default
-            end
+            InputService.MouseBehavior = Enum.MouseBehavior.Default -- Принудительно отвязываем от центра
             
             local mPos = InputService:GetMouseLocation();
             QuorumLib.CursorDrawing.Color = QuorumLib.AccentColor;
@@ -1724,8 +1719,8 @@ do
         QuorumLib:AddToRegistry(ToggleInner, { BackgroundColor3 = 'MainColor'; BorderColor3 = 'OutlineColor'; });
 
         local ToggleLabel = QuorumLib:CreateLabel({
-            Size = UDim2.new(1, -30, 1, 0);
-            Position = UDim2.new(0, 22, 0, 0);
+            Size = UDim2.new(0, 216, 1, 0);
+            Position = UDim2.new(1, 6, 0, 0);
             TextSize = 14;
             Text = Info.Text;
             TextXAlignment = Enum.TextXAlignment.Left;
@@ -1733,9 +1728,17 @@ do
             Parent = ToggleInner;
         });
 
+        QuorumLib:Create('UIListLayout', {
+            Padding = UDim.new(0, 4);
+            FillDirection = Enum.FillDirection.Horizontal;
+            HorizontalAlignment = Enum.HorizontalAlignment.Right;
+            SortOrder = Enum.SortOrder.LayoutOrder;
+            Parent = ToggleLabel;
+        });
+
         local ToggleRegion = QuorumLib:Create('Frame', {
             BackgroundTransparency = 1;
-            Size = UDim2.new(1, 0, 1, 0);
+            Size = UDim2.new(0, 170, 1, 0);
             ZIndex = 8;
             Parent = ToggleOuter;
         });
@@ -1899,9 +1902,8 @@ do
             end
 
             local X = math.ceil(QuorumLib:MapValue(Slider.Value, Slider.Min, Slider.Max, 0, Slider.MaxSize));
-            -- Масштабируем заполнение для адаптивного изменения размера
-            Fill.Size = UDim2.new((Slider.Value - Slider.Min) / (Slider.Max - Slider.Min), 0, 1, 0);
-            HideBorderRight.Visible = not (Slider.Value == Slider.Max or Slider.Value == Slider.Min);
+            Fill.Size = UDim2.new(0, X, 1, 0);
+            HideBorderRight.Visible = not (X == Slider.MaxSize or X == 0);
         end;
 
         function Slider:OnChanged(Func)
@@ -1931,7 +1933,7 @@ do
         SliderInner.InputBegan:Connect(function(Input)
             if IsPrimaryPress(Input) and not QuorumLib:MouseIsOverOpenedFrame() then
                 local mPos = GetInputPosition(Input).X;
-                local gPos = Fill.AbsoluteSize.X;
+                local gPos = Fill.Size.X.Offset;
                 local Diff = mPos - (Fill.AbsolutePosition.X + gPos);
                 while IsPrimaryHeld() do
                     local nMPos = GetCursorPosition().X;
@@ -2849,7 +2851,7 @@ function QuorumLib:CreateWindow(...)
             BackgroundTransparency = 1;
             BorderSizePixel = 0;
             Position = UDim2.new(0, 8 - 1, 0, 8 - 1);
-            Size = UDim2.new(0.5, -12 + 2, 1, -16 + 2); -- Изменено на Scale чтобы тянулось при ресайзе
+            Size = UDim2.new(0.5, -12 + 2, 0, 507 + 2);
             CanvasSize = UDim2.new(0, 0, 0, 0);
             BottomImage = '';
             TopImage = '';
@@ -2862,7 +2864,7 @@ function QuorumLib:CreateWindow(...)
             BackgroundTransparency = 1;
             BorderSizePixel = 0;
             Position = UDim2.new(0.5, 4 + 1, 0, 8 - 1);
-            Size = UDim2.new(0.5, -12 + 2, 1, -16 + 2); -- Изменено на Scale чтобы тянулось при ресайзе
+            Size = UDim2.new(0.5, -12 + 2, 0, 507 + 2);
             CanvasSize = UDim2.new(0, 0, 0, 0);
             BottomImage = '';
             TopImage = '';
