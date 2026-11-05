@@ -1,4 +1,3 @@
-warn"hui"
 local _oldQrm = getgenv and getgenv().QuorumLib
 if _oldQrm and _oldQrm.Unload then
     pcall(function() _oldQrm:Unload() end)
@@ -951,6 +950,7 @@ do
                 pcall(setclipboard, table.concat({ math.floor(ColorPicker.Value.R * 255), math.floor(ColorPicker.Value.G * 255), math.floor(ColorPicker.Value.B * 255) }, ', '))
                 QuorumLib:Notify('Copied RGB values to clipboard!', 2)
             end)
+
         end
 
         QuorumLib:AddToRegistry(PickerFrameInner, { BackgroundColor3 = 'BackgroundColor'; BorderColor3 = 'OutlineColor'; });
@@ -1452,7 +1452,7 @@ do
         local Container = Groupbox.Container;
 
         local cleanText = string.gsub(Text, "<([%w%-_]+)>", "")
-        local richText = ParseRichText(cleanText)
+        local richText = ParseRichText(Text)
 
         local TextLabel = QuorumLib:CreateLabel({
             Size = UDim2.new(1, -4, 0, 15);
@@ -1474,10 +1474,9 @@ do
         Label.Container = Container;
 
         function Label:SetText(NewText)
-            local cText = string.gsub(NewText, "<([%w%-_]+)>", "")
-            TextLabel.Text = ParseRichText(cText)
+            TextLabel.Text = ParseRichText(NewText)
             if DoesWrap then
-                local Y = select(2, QuorumLib:GetTextBounds(cText, QuorumLib.Font, 14, Vector2.new(TextLabel.AbsoluteSize.X, math.huge)))
+                local Y = select(2, QuorumLib:GetTextBounds(NewText, QuorumLib.Font, 14, Vector2.new(TextLabel.AbsoluteSize.X, math.huge)))
                 TextLabel.Size = UDim2.new(1, -4, 0, Y)
             end
             Groupbox:Resize();
@@ -1526,11 +1525,10 @@ do
                 Parent = Outer;
             });
 
-            local cleanText = string.gsub(Button.Text, "<([%w%-_]+)>", "")
             local Label = QuorumLib:CreateLabel({
                 Size = UDim2.new(1, 0, 1, 0);
                 TextSize = 14;
-                Text = ParseRichText(cleanText);
+                Text = ParseRichText(Button.Text);
                 RichText = true;
                 ZIndex = 6;
                 Parent = Inner;
@@ -1593,8 +1591,7 @@ do
                     QuorumLib:RemoveFromRegistry(Button.Label)
                     QuorumLib:AddToRegistry(Button.Label, { TextColor3 = 'FontColor' })
                     Button.Label.TextColor3 = QuorumLib.FontColor
-                    local cleanText = string.gsub(Button.Text, "<([%w%-_]+)>", "")
-                    Button.Label.Text = ParseRichText(cleanText)
+                    Button.Label.Text = ParseRichText(Button.Text)
                     task.defer(rawset, Button, 'Locked', false)
                     if clicked then QuorumLib:SafeCallback(Button.Func) end
                     return
@@ -1669,7 +1666,6 @@ do
 
     function Funcs:AddInput(Idx, Info)
         assert(Info.Text, 'AddInput: Missing `Text` string.')
-        local cleanText = string.gsub(Info.Text, "<([%w%-_]+)>", "")
 
         local Textbox = {
             Value = Info.Default or '';
@@ -1681,11 +1677,10 @@ do
 
         local Groupbox = self;
         local Container = Groupbox.Container;
-
         local InputLabel = QuorumLib:CreateLabel({
             Size = UDim2.new(1, 0, 0, 15);
             TextSize = 14;
-            Text = ParseRichText(cleanText);
+            Text = ParseRichText(Info.Text);
             RichText = true;
             TextXAlignment = Enum.TextXAlignment.Left;
             ZIndex = 5;
@@ -1724,7 +1719,7 @@ do
             Parent = TextBoxInner;
         });
 
-        local ContainerInner = QuorumLib:Create('Frame', {
+        local Container = QuorumLib:Create('Frame', {
             BackgroundTransparency = 1;
             ClipsDescendants = true;
             Position = UDim2.new(0, 5, 0, 0);
@@ -1746,7 +1741,7 @@ do
             TextStrokeTransparency = 0;
             TextXAlignment = Enum.TextXAlignment.Left;
             ZIndex = 7;
-            Parent = ContainerInner;
+            Parent = Container;
         });
 
         QuorumLib:ApplyTextStroke(Box);
@@ -1777,7 +1772,7 @@ do
 
         local function Update()
             local PADDING = 2
-            local reveal = ContainerInner.AbsoluteSize.X
+            local reveal = Container.AbsoluteSize.X
             if not Box:IsFocused() or Box.TextBounds.X <= reveal - 2 * PADDING then
                 Box.Position = UDim2.new(0, PADDING, 0, 0)
             else
@@ -1815,8 +1810,6 @@ do
 
     function Funcs:AddToggle(Idx, Info)
         assert(Info.Text, 'AddInput: Missing `Text` string.')
-        local cleanText = string.gsub(Info.Text, "<([%w%-_]+)>", "")
-
         local Toggle = {
             Value = Info.Default or false;
             Type = 'Toggle';
@@ -1860,7 +1853,7 @@ do
             Size = UDim2.new(1, -20, 1, 0);
             Position = UDim2.new(0, 20, 0, 0);
             TextSize = 14;
-            Text = ParseRichText(cleanText);
+            Text = ParseRichText(Info.Text);
             RichText = true;
             TextXAlignment = Enum.TextXAlignment.Left;
             ZIndex = 6;
@@ -1940,8 +1933,6 @@ do
         assert(Info.Max, 'AddSlider: Missing maximum value.');
         assert(Info.Rounding, 'AddSlider: Missing rounding value.');
 
-        local cleanText = string.gsub(Info.Text, "<([%w%-_]+)>", "")
-
         local Slider = {
             Value = Info.Default;
             Min = Info.Min;
@@ -1959,7 +1950,7 @@ do
             QuorumLib:CreateLabel({
                 Size = UDim2.new(1, 0, 0, 10);
                 TextSize = 14;
-                Text = ParseRichText(cleanText);
+                Text = ParseRichText(Info.Text);
                 RichText = true;
                 TextXAlignment = Enum.TextXAlignment.Left;
                 TextYAlignment = Enum.TextYAlignment.Bottom;
@@ -2030,7 +2021,7 @@ do
         function Slider:Display()
             local Suffix = Info.Suffix or '';
             if Info.Compact then
-                DisplayLabel.Text = cleanText .. ': ' .. Slider.Value .. Suffix
+                DisplayLabel.Text = Info.Text .. ': ' .. Slider.Value .. Suffix
             elseif Info.HideMax then
                 DisplayLabel.Text = string.format('%s', Slider.Value .. Suffix)
             else
@@ -2109,8 +2100,6 @@ do
 
         if (not Info.Text) then Info.Compact = true; end;
 
-        local cleanText = string.gsub(Info.Text or '', "<([%w%-_]+)>", "")
-
         local Dropdown = {
             Values = Info.Values;
             Value = Info.Multi and {};
@@ -2125,10 +2114,10 @@ do
         local RelativeOffset = 0;
 
         if not Info.Compact then
-            QuorumLib:CreateLabel({
+            local DropdownLabel = QuorumLib:CreateLabel({
                 Size = UDim2.new(1, 0, 0, 10);
                 TextSize = 14;
-                Text = ParseRichText(cleanText);
+                Text = ParseRichText(Info.Text);
                 RichText = true;
                 TextXAlignment = Enum.TextXAlignment.Left;
                 TextYAlignment = Enum.TextYAlignment.Bottom;
@@ -2141,7 +2130,7 @@ do
         for _, Element in next, Container:GetChildren() do
             if not Element:IsA('UIListLayout') then
                 RelativeOffset = RelativeOffset + Element.Size.Y.Offset;
-            end;
+            end
         end;
 
         local DropdownOuter = QuorumLib:Create('Frame', {
@@ -2868,17 +2857,12 @@ function QuorumLib:CreateWindow(...)
     local WindowLabel = QuorumLib:CreateLabel({
         Position = UDim2.new(0, 7, 0, 0);
         Size = UDim2.new(0, 0, 0, 25);
-        Text = Config.Title or '';
+        Text = ParseRichText(Config.Title or '');
+        RichText = true;
         TextXAlignment = Enum.TextXAlignment.Left;
         ZIndex = 1;
         Parent = Inner;
     });
-
-    if Config.Title and Config.Title ~= '' then
-        WindowLabel.Text = ParseRichText(GetCleanText(ParseSegments(Config.Title)))
-        WindowLabel.RichText = true
-        WindowLabel.Size = UDim2.new(0, QuorumLib:GetTextBounds(GetCleanText(ParseSegments(Config.Title)), QuorumLib.Font, 16) + 20, 0, 25)
-    end
 
     local MainSectionOuter = QuorumLib:Create('Frame', {
         BackgroundColor3 = QuorumLib.BackgroundColor;
@@ -2945,9 +2929,7 @@ function QuorumLib:CreateWindow(...)
     QuorumLib:AddToRegistry(TabContainer, { BackgroundColor3 = 'MainColor'; BorderColor3 = 'OutlineColor'; });
 
     function Window:SetWindowTitle(Title)
-        WindowLabel.Text = ParseRichText(GetCleanText(ParseSegments(Title)))
-        WindowLabel.RichText = true
-        WindowLabel.Size = UDim2.new(0, QuorumLib:GetTextBounds(GetCleanText(ParseSegments(Title)), QuorumLib.Font, 16) + 20, 0, 25)
+        WindowLabel.Text = ParseRichText(Title)
     end;
 
     function Window:SetSize(NewSize)
@@ -2978,7 +2960,7 @@ function QuorumLib:CreateWindow(...)
 
     function Window:AddTab(Name)
         local cleanName = GetCleanText(ParseSegments(Name))
-        local richName = ParseRichText(cleanName)
+        local richName = ParseRichText(Name)
 
         local Tab = {
             Groupboxes = {};
@@ -3100,7 +3082,7 @@ function QuorumLib:CreateWindow(...)
 
         function Tab:AddGroupbox(Info)
             local cleanName = GetCleanText(ParseSegments(Info.Name))
-            local richName = ParseRichText(cleanName)
+            local richName = ParseRichText(Info.Name)
 
             local Groupbox = {};
             local BoxOuter = QuorumLib:Create('Frame', {
@@ -3232,7 +3214,7 @@ function QuorumLib:CreateWindow(...)
 
             function Tabbox:AddTab(Name)
                 local cleanName = GetCleanText(ParseSegments(Name))
-                local richName = ParseRichText(cleanName)
+                local richName = ParseRichText(Name)
 
                 local Tab = {};
                 local Button = QuorumLib:Create('Frame', {
@@ -3343,7 +3325,7 @@ function QuorumLib:CreateWindow(...)
         function Tab:AddRightTabbox(Name) return Tab:AddTabbox({ Name = Name, Side = 2; }); end;
 
         TabButton.InputBegan:Connect(function(Input)
-            if IsPrimaryPress(Input) then Tab:ShowTab(); end
+            if IsPrimaryPress(Input) then Tab:ShowTab(); end;
         end);
 
         if #TabContainer:GetChildren() == 1 then Tab:ShowTab(); end;
