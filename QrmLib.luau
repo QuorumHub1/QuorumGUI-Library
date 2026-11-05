@@ -1,3 +1,8 @@
+local _oldQrm = getgenv and getgenv().QuorumLib
+if _oldQrm and _oldQrm.Unload then
+    pcall(function() _oldQrm:Unload() end)
+end
+
 local InputService = game:GetService('UserInputService');
 local TextService = game:GetService('TextService');
 local CoreGui = game:GetService('CoreGui');
@@ -96,6 +101,9 @@ local QuorumLib = {
 
     Signals = {};
     ScreenGui = ScreenGui;
+
+    UseCustomCursor = true;
+    MobileToggle = nil;
 };
 
 local RainbowStep = 0
@@ -439,6 +447,10 @@ function QuorumLib:GiveSignal(Signal)
     table.insert(QuorumLib.Signals, Signal)
 end
 
+function QuorumLib:SetCustomCursor(Enabled)
+    QuorumLib.UseCustomCursor = Enabled and true or false;
+end;
+
 function QuorumLib:Unload()
     -- Unload all of the signals
     for Idx = #QuorumLib.Signals, 1, -1 do
@@ -449,6 +461,15 @@ function QuorumLib:Unload()
      -- Call our unload callback, maybe to undo some hooks etc
     if QuorumLib.OnUnload then
         QuorumLib.OnUnload()
+    end
+
+    if QuorumLib.MobileToggle then
+        pcall(function() QuorumLib.MobileToggle:Destroy() end)
+        QuorumLib.MobileToggle = nil
+    end
+
+    if getgenv and getgenv().QuorumLib == QuorumLib then
+        getgenv().QuorumLib = nil
     end
 
     ScreenGui:Destroy()
@@ -3031,12 +3052,14 @@ function QuorumLib:CreateWindow(...)
     if type(Config.Title) ~= 'string' then Config.Title = 'Quorum UI Library' end
     if type(Config.TabPadding) ~= 'number' then Config.TabPadding = 4 end
     if type(Config.MenuFadeTime) ~= 'number' then Config.MenuFadeTime = 0.2 end
+    if Config.UseCustomCursor == nil then Config.UseCustomCursor = true end
+    QuorumLib.UseCustomCursor = Config.UseCustomCursor and true or false
 
     if typeof(Config.Position) ~= 'UDim2' then Config.Position = UDim2.fromOffset(175, 50) end
     if typeof(Config.Size) ~= 'UDim2' then Config.Size = UDim2.fromOffset(550, 600) end
 
     if IsMobile then
-        if typeof(Config.Size) ~= 'UDim2' or Config.Size == UDim2.fromOffset(550, 600) then
+        if Config.Size == UDim2.fromOffset(550, 600) then
             local VP = workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize or Vector2.new(1024, 768)
             Config.Size = UDim2.fromOffset(math.min(420, VP.X - 40), math.min(360, VP.Y - 80))
         end
@@ -3635,7 +3658,7 @@ function QuorumLib:CreateWindow(...)
             -- A bit scuffed, but if we're going from not toggled -> toggled we want to show the frame immediately so that the fade is visible.
             Outer.Visible = true;
 
-            if not IsTouchDevice then
+            if QuorumLib.UseCustomCursor and not IsTouchDevice then
                 task.spawn(function()
                     -- TODO: add cursor fade?
                     local State = InputService.MouseIconEnabled;
@@ -3651,7 +3674,7 @@ function QuorumLib:CreateWindow(...)
                     CursorOutline.Color = Color3.new(0, 0, 0);
                     CursorOutline.Visible = true;
 
-                    while Toggled and ScreenGui.Parent do
+                    while Toggled and QuorumLib.UseCustomCursor and ScreenGui.Parent do
                         InputService.MouseIconEnabled = false;
 
                         local mPos = InputService:GetMouseLocation();
@@ -3728,6 +3751,36 @@ function QuorumLib:CreateWindow(...)
             task.spawn(QuorumLib.Toggle)
         end
     end))
+
+    if IsMobile then
+        local MobileBtn = QuorumLib:Create('TextButton', {
+            BackgroundColor3 = QuorumLib.MainColor;
+            BorderColor3 = QuorumLib.AccentColor;
+            BorderMode = Enum.BorderMode.Inset;
+            AnchorPoint = Vector2.new(1, 1);
+            Position = UDim2.new(1, -20, 1, -20);
+            Size = UDim2.fromOffset(44, 44);
+            Text = Config.MobileToggleIcon or '☰';
+            Font = QuorumLib.Font;
+            TextSize = 20;
+            TextColor3 = QuorumLib.FontColor;
+            AutoButtonColor = false;
+            ZIndex = 999;
+            Parent = ScreenGui;
+        });
+
+        QuorumLib:AddToRegistry(MobileBtn, {
+            BackgroundColor3 = 'MainColor';
+            BorderColor3 = 'AccentColor';
+            TextColor3 = 'FontColor';
+        }, true);
+
+        MobileBtn.MouseButton1Click:Connect(function()
+            task.spawn(QuorumLib.Toggle)
+        end);
+
+        QuorumLib.MobileToggle = MobileBtn;
+    end
 
     if Config.AutoShow then task.spawn(QuorumLib.Toggle) end
 
