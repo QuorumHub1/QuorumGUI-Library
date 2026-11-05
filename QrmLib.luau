@@ -1,4 +1,3 @@
-warn"hi"
 local _oldQrm = getgenv and getgenv().QuorumLib
 if _oldQrm and _oldQrm.Unload then
     pcall(function() _oldQrm:Unload() end)
@@ -129,6 +128,165 @@ local function GetLucideAsset(name)
     }
 end
 
+local function ParseSegments(Text)
+    local segments = {}
+    local pos = 1
+    local len = #Text
+    while pos <= len do
+        local startIdx, endIdx, name = string.find(Text, "<([%w%-_]+)>", pos)
+        if startIdx then
+            if startIdx > pos then
+                table.insert(segments, { type = 'text', value = string.sub(Text, pos, startIdx - 1) })
+            end
+            table.insert(segments, { type = 'icon', value = name })
+            pos = endIdx + 1
+        else
+            table.insert(segments, { type = 'text', value = string.sub(Text, pos) })
+            break
+        end
+    end
+    return segments
+end
+
+local function CountValidIcons(segments)
+    local count = 0
+    for _, seg in next, segments do
+        if seg.type == 'icon' and GetLucideAsset(seg.value) ~= nil then
+            count = count + 1
+        end
+    end
+    return count
+end
+
+local function GetCleanText(segments)
+    local text = ''
+    for _, seg in next, segments do
+        if seg.type == 'text' then text = text .. seg.value end
+    end
+    return text
+end
+
+local function BuildRow(segments, Parent, Y, ZIndex, TextSize)
+    local cleanText = GetCleanText(segments)
+    local Row = QuorumLib:Create('Frame', {
+        BackgroundTransparency = 1;
+        Size = UDim2.new(1, 0, 0, 15);
+        Position = UDim2.new(0, 0, 0, Y or 0);
+        ZIndex = ZIndex or 5;
+        Parent = Parent;
+    });
+    QuorumLib:Create('UIListLayout', {
+        Padding = UDim.new(0, 4);
+        FillDirection = Enum.FillDirection.Horizontal;
+        VerticalAlignment = Enum.VerticalAlignment.Center;
+        HorizontalAlignment = Enum.HorizontalAlignment.Left;
+        SortOrder = Enum.SortOrder.LayoutOrder;
+        Parent = Row;
+    });
+    local idx = 0
+    local firstLabel
+    for _, seg in next, segments do
+        idx = idx + 1
+        if seg.type == 'icon' then
+            local asset = GetLucideAsset(seg.value)
+            if asset then
+                QuorumLib:Create('ImageLabel', {
+                    BackgroundTransparency = 1;
+                    Size = UDim2.new(0, 14, 0, 14);
+                    Image = 'rbxassetid://' .. asset.id;
+                    ImageRectOffset = asset.imageRectOffset;
+                    ImageRectSize = asset.imageRectSize;
+                    ImageColor3 = QuorumLib.FontColor;
+                    LayoutOrder = idx;
+                    ZIndex = ZIndex or 5;
+                    Parent = Row;
+                });
+            end
+        else
+            if seg.value ~= '' then
+                local lbl = QuorumLib:CreateLabel({
+                    Size = UDim2.new(0, 0, 0, 15);
+                    AutomaticSize = Enum.AutomaticSize.X;
+                    TextSize = TextSize or 14;
+                    Text = seg.value;
+                    TextXAlignment = Enum.TextXAlignment.Left;
+                    LayoutOrder = idx;
+                    ZIndex = ZIndex or 5;
+                    Parent = Row;
+                });
+                if not firstLabel then firstLabel = lbl end
+            end
+        end
+    end
+    return Row, firstLabel, cleanText
+end
+
+local function BuildButtonContent(segments, Parent, ZIndex)
+    local cleanText = GetCleanText(segments)
+    local Row = QuorumLib:Create('Frame', {
+        BackgroundTransparency = 1;
+        Size = UDim2.new(1, -12, 0, 15);
+        Position = UDim2.new(0, 6, 0.5, 0);
+        AnchorPoint = Vector2.new(0, 0.5);
+        ZIndex = ZIndex or 6;
+        Parent = Parent;
+    });
+    QuorumLib:Create('UIListLayout', {
+        Padding = UDim.new(0, 4);
+        FillDirection = Enum.FillDirection.Horizontal;
+        VerticalAlignment = Enum.VerticalAlignment.Center;
+        HorizontalAlignment = Enum.HorizontalAlignment.Center;
+        SortOrder = Enum.SortOrder.LayoutOrder;
+        Parent = Row;
+    });
+    local idx = 0
+    local firstLabel
+    for _, seg in next, segments do
+        idx = idx + 1
+        if seg.type == 'icon' then
+            local asset = GetLucideAsset(seg.value)
+            if asset then
+                QuorumLib:Create('ImageLabel', {
+                    BackgroundTransparency = 1;
+                    Size = UDim2.new(0, 14, 0, 14);
+                    Image = 'rbxassetid://' .. asset.id;
+                    ImageRectOffset = asset.imageRectOffset;
+                    ImageRectSize = asset.imageRectSize;
+                    ImageColor3 = QuorumLib.FontColor;
+                    LayoutOrder = idx;
+                    ZIndex = ZIndex or 6;
+                    Parent = Row;
+                });
+            end
+        else
+            if seg.value ~= '' then
+                local lbl = QuorumLib:CreateLabel({
+                    Size = UDim2.new(0, 0, 0, 15);
+                    AutomaticSize = Enum.AutomaticSize.X;
+                    TextSize = 14;
+                    Text = seg.value;
+                    TextXAlignment = Enum.TextXAlignment.Left;
+                    LayoutOrder = idx;
+                    ZIndex = ZIndex or 6;
+                    Parent = Row;
+                });
+                if not firstLabel then firstLabel = lbl end
+            end
+        end
+    end
+    if not firstLabel then
+        firstLabel = QuorumLib:CreateLabel({
+            Size = UDim2.new(1, 0, 1, 0);
+            TextSize = 14;
+            Text = cleanText;
+            TextXAlignment = Enum.TextXAlignment.Center;
+            ZIndex = ZIndex or 6;
+            Parent = Parent;
+        });
+    end
+    return Row, firstLabel, cleanText
+end
+
 local RainbowStep = 0
 local Hue = 0
 
@@ -160,83 +318,6 @@ local function GetTeamsString()
     table.sort(TeamList, function(str1, str2) return str1 < str2 end);
     return TeamList;
 end;
-
-local function ParseSegments(Text)
-    local segments = {}
-    local pos = 1
-    local len = #Text
-    while pos <= len do
-        local startIdx, endIdx, name = string.find(Text, "<([%w%-_]+)>", pos)
-        if startIdx then
-            if startIdx > pos then
-                table.insert(segments, { type = 'text', value = string.sub(Text, pos, startIdx - 1) })
-            end
-            table.insert(segments, { type = 'icon', value = name })
-            pos = endIdx + 1
-        else
-            table.insert(segments, { type = 'text', value = string.sub(Text, pos) })
-            break
-        end
-    end
-    return segments
-end
-
--- Дополнительные хелперы для отрисовки иконок в ряд
-local ICON_SIZE = 14
-local ICON_GAP = 4
-
-local function RenderIconsInline(segments, Parent, StartX, Y, ZIndex)
-    local count = 0
-    local x = StartX
-    for _, seg in next, segments do
-        if seg.type == 'icon' then
-            local asset = GetLucideAsset(seg.value)
-            if asset then
-                QuorumLib:Create('ImageLabel', {
-                    BackgroundTransparency = 1;
-                    Position = UDim2.new(0, x, 0, Y);
-                    Size = UDim2.new(0, ICON_SIZE, 0, ICON_SIZE);
-                    Image = 'rbxassetid://' .. asset.id;
-                    ImageRectOffset = asset.imageRectOffset;
-                    ImageRectSize = asset.imageRectSize;
-                    ImageColor3 = QuorumLib.FontColor;
-                    ZIndex = ZIndex;
-                    Parent = Parent;
-                });
-                count = count + 1
-                x = x + ICON_SIZE + ICON_GAP
-            end
-        end
-    end
-    return count, x
-end
-
-local function CountValidIcons(segments)
-    local count = 0
-    for _, seg in next, segments do
-        if seg.type == 'icon' and GetLucideAsset(seg.value) ~= nil then
-            count = count + 1
-        end
-    end
-    return count
-end
-
-local function GetCleanText(segments)
-    local text = ''
-    for _, seg in next, segments do
-        if seg.type == 'text' then text = text .. seg.value end
-    end
-    return text
-end
-
-function QuorumLib:ParseIcon(Text)
-    local iconName = string.match(Text, "<([%w%-_]+)>")
-    if iconName then
-        local cleanText = string.gsub(Text, "<" .. iconName .. ">%s*", "")
-        return iconName, cleanText
-    end
-    return nil, Text
-end
 
 function QuorumLib:SafeCallback(f, ...)
     if (not f) then return; end;
@@ -1441,127 +1522,6 @@ local BaseGroupbox = {};
 do
     local Funcs = {};
 
-    local function BuildRow(segments, Parent, Y, ZIndex, TextSize)
-        local cleanText = GetCleanText(segments)
-        local Row = QuorumLib:Create('Frame', {
-            BackgroundTransparency = 1;
-            Size = UDim2.new(1, 0, 0, 15);
-            Position = UDim2.new(0, 0, 0, Y or 0);
-            ZIndex = ZIndex or 5;
-            Parent = Parent;
-        });
-        QuorumLib:Create('UIListLayout', {
-            Padding = UDim.new(0, 4);
-            FillDirection = Enum.FillDirection.Horizontal;
-            VerticalAlignment = Enum.VerticalAlignment.Center;
-            HorizontalAlignment = Enum.HorizontalAlignment.Left;
-            SortOrder = Enum.SortOrder.LayoutOrder;
-            Parent = Row;
-        });
-        local idx = 0
-        local firstLabel
-        for _, seg in next, segments do
-            idx = idx + 1
-            if seg.type == 'icon' then
-                local asset = GetLucideAsset(seg.value)
-                if asset then
-                    QuorumLib:Create('ImageLabel', {
-                        BackgroundTransparency = 1;
-                        Size = UDim2.new(0, 14, 0, 14);
-                        Image = 'rbxassetid://' .. asset.id;
-                        ImageRectOffset = asset.imageRectOffset;
-                        ImageRectSize = asset.imageRectSize;
-                        ImageColor3 = QuorumLib.FontColor;
-                        LayoutOrder = idx;
-                        ZIndex = ZIndex or 5;
-                        Parent = Row;
-                    });
-                end
-            else
-                if seg.value ~= '' then
-                    local lbl = QuorumLib:CreateLabel({
-                        Size = UDim2.new(0, 0, 0, 15);
-                        AutomaticSize = Enum.AutomaticSize.X;
-                        TextSize = TextSize or 14;
-                        Text = seg.value;
-                        TextXAlignment = Enum.TextXAlignment.Left;
-                        LayoutOrder = idx;
-                        ZIndex = ZIndex or 5;
-                        Parent = Row;
-                    });
-                    if not firstLabel then firstLabel = lbl end
-                end
-            end
-        end
-        return Row, firstLabel, cleanText
-    end
-
-    local function BuildButtonContent(segments, Parent, ZIndex)
-        local cleanText = GetCleanText(segments)
-        local Row = QuorumLib:Create('Frame', {
-            BackgroundTransparency = 1;
-            Size = UDim2.new(1, -12, 0, 15);
-            Position = UDim2.new(0, 6, 0.5, 0);
-            AnchorPoint = Vector2.new(0, 0.5);
-            ZIndex = ZIndex or 6;
-            Parent = Parent;
-        });
-        QuorumLib:Create('UIListLayout', {
-            Padding = UDim.new(0, 4);
-            FillDirection = Enum.FillDirection.Horizontal;
-            VerticalAlignment = Enum.VerticalAlignment.Center;
-            HorizontalAlignment = Enum.HorizontalAlignment.Center;
-            SortOrder = Enum.SortOrder.LayoutOrder;
-            Parent = Row;
-        });
-        local idx = 0
-        local firstLabel
-        for _, seg in next, segments do
-            idx = idx + 1
-            if seg.type == 'icon' then
-                local asset = GetLucideAsset(seg.value)
-                if asset then
-                    QuorumLib:Create('ImageLabel', {
-                        BackgroundTransparency = 1;
-                        Size = UDim2.new(0, 14, 0, 14);
-                        Image = 'rbxassetid://' .. asset.id;
-                        ImageRectOffset = asset.imageRectOffset;
-                        ImageRectSize = asset.imageRectSize;
-                        ImageColor3 = QuorumLib.FontColor;
-                        LayoutOrder = idx;
-                        ZIndex = ZIndex or 6;
-                        Parent = Row;
-                    });
-                end
-            else
-                if seg.value ~= '' then
-                    local lbl = QuorumLib:CreateLabel({
-                        Size = UDim2.new(0, 0, 0, 15);
-                        AutomaticSize = Enum.AutomaticSize.X;
-                        TextSize = 14;
-                        Text = seg.value;
-                        TextXAlignment = Enum.TextXAlignment.Left;
-                        LayoutOrder = idx;
-                        ZIndex = ZIndex or 6;
-                        Parent = Row;
-                    });
-                    if not firstLabel then firstLabel = lbl end
-                end
-            end
-        end
-        if not firstLabel then
-            firstLabel = QuorumLib:CreateLabel({
-                Size = UDim2.new(1, 0, 1, 0);
-                TextSize = 14;
-                Text = cleanText;
-                TextXAlignment = Enum.TextXAlignment.Center;
-                ZIndex = ZIndex or 6;
-                Parent = Parent;
-            });
-        end
-        return Row, firstLabel, cleanText
-    end
-
     function Funcs:AddBlank(Size)
         local Groupbox = self;
         local Container = Groupbox.Container;
@@ -1598,10 +1558,9 @@ do
                 SortOrder = Enum.SortOrder.LayoutOrder;
                 Parent = Row;
             });
-            local textSegments = {}
             local iconSegments = {}
             for _, seg in next, segments do
-                if seg.type == 'text' then table.insert(textSegments, seg) else table.insert(iconSegments, seg) end
+                if seg.type == 'icon' then table.insert(iconSegments, seg) end
             end
             local idx = 0
             for _, seg in next, iconSegments do
