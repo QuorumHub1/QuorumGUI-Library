@@ -2404,11 +2404,11 @@ do
 end;
 
 do
-    local function CreateNotificationArea(Position, Size, AnchorPoint, LayoutOrder)
+    local function CreateNotificationArea(Position, AnchorPoint, LayoutOrder)
         local Area = QuorumLib:Create('Frame', {
             BackgroundTransparency = 1;
             Position = Position;
-            Size = Size;
+            Size = UDim2.new(1, 0, 1, 0);
             AnchorPoint = AnchorPoint;
             ZIndex = 100;
             Parent = ScreenGui;
@@ -2423,15 +2423,23 @@ do
 
         if LayoutOrder == 'BottomLeft' or LayoutOrder == 'BottomRight' then
             Layout.VerticalAlignment = Enum.VerticalAlignment.Bottom;
+        else
+            Layout.VerticalAlignment = Enum.VerticalAlignment.Top;
+        end
+
+        if LayoutOrder == 'TopRight' or LayoutOrder == 'BottomRight' then
+            Layout.HorizontalAlignment = Enum.HorizontalAlignment.Right;
+        else
+            Layout.HorizontalAlignment = Enum.HorizontalAlignment.Left;
         end
 
         return Area;
     end
 
-    QuorumLib.NotificationAreas.TopLeft = CreateNotificationArea(UDim2.new(0, 10, 0, 60), UDim2.fromOffset(300, 400), Vector2.new(0, 0))
-    QuorumLib.NotificationAreas.TopRight = CreateNotificationArea(UDim2.new(1, -10, 0, 60), UDim2.fromOffset(300, 400), Vector2.new(1, 0))
-    QuorumLib.NotificationAreas.BottomLeft = CreateNotificationArea(UDim2.new(0, 10, 1, -50), UDim2.fromOffset(300, 400), Vector2.new(0, 1), 'BottomLeft')
-    QuorumLib.NotificationAreas.BottomRight = CreateNotificationArea(UDim2.new(1, -10, 1, -50), UDim2.fromOffset(300, 400), Vector2.new(1, 1), 'BottomRight')
+    QuorumLib.NotificationAreas.TopLeft = CreateNotificationArea(UDim2.new(0, 10, 0, 60), Vector2.new(0, 0))
+    QuorumLib.NotificationAreas.TopRight = CreateNotificationArea(UDim2.new(1, -10, 0, 60), Vector2.new(1, 0), 'TopRight')
+    QuorumLib.NotificationAreas.BottomLeft = CreateNotificationArea(UDim2.new(0, 10, 1, -50), Vector2.new(0, 1), 'BottomLeft')
+    QuorumLib.NotificationAreas.BottomRight = CreateNotificationArea(UDim2.new(1, -10, 1, -50), Vector2.new(1, 1), 'BottomRight')
     
     QuorumLib.NotificationArea = QuorumLib.NotificationAreas.TopLeft
 
