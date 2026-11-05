@@ -1,4 +1,3 @@
-print"balls"
 local _oldQrm = getgenv and getgenv().QuorumLib
 if _oldQrm and _oldQrm.Unload then
     pcall(function() _oldQrm:Unload() end)
@@ -83,7 +82,7 @@ local QuorumLib = {
     CursorDrawing = nil;
     CursorOutlineDrawing = nil;
     MenuToggled = false;
-    UnlockCamera = true;
+    FixFirstPerson = true;
 };
 
 local RainbowStep = 0
@@ -389,13 +388,8 @@ local function SpawnCustomCursor()
         while QuorumLib.MenuToggled and QuorumLib.UseCustomCursor and ScreenGui.Parent do
             InputService.MouseIconEnabled = false;
             
-            if QuorumLib.UnlockCamera then
-                local isFirstPerson = LocalPlayer.CameraMode == Enum.CameraMode.LockFirstPerson
-                local isShiftLock = InputService.MouseBehavior == Enum.MouseBehavior.LockCenter
-                
-                if isFirstPerson or isShiftLock then
-                    InputService.MouseBehavior = Enum.MouseBehavior.Default
-                end
+            if QuorumLib.FixFirstPerson then
+                InputService.MouseBehavior = Enum.MouseBehavior.Default
             end
             
             local mPos = InputService:GetMouseLocation();
@@ -1710,8 +1704,6 @@ do
             BackgroundColor3 = Color3.new(0, 0, 0);
             BorderColor3 = Color3.new(0, 0, 0);
             Size = UDim2.new(0, 13, 0, 13);
-            Position = UDim2.new(0, 0, 0.5, -6.5);
-            AnchorPoint = Vector2.new(0, 0.5);
             ZIndex = 5;
             Parent = Container;
         });
@@ -1730,8 +1722,8 @@ do
         QuorumLib:AddToRegistry(ToggleInner, { BackgroundColor3 = 'MainColor'; BorderColor3 = 'OutlineColor'; });
 
         local ToggleLabel = QuorumLib:CreateLabel({
-            Size = UDim2.new(1, -34, 1, 0);
-            Position = UDim2.new(0, 34, 0, 0);
+            Size = UDim2.new(1, -26, 1, 0);
+            Position = UDim2.new(0, 26, 0, 0);
             TextSize = 14;
             Text = Info.Text;
             TextXAlignment = Enum.TextXAlignment.Left;
