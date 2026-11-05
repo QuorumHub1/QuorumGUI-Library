@@ -1,4 +1,3 @@
-print("hey")
 local _oldQrm = getgenv and getgenv().QuorumLib
 if _oldQrm and _oldQrm.Unload then
     pcall(function() _oldQrm:Unload() end)
@@ -37,16 +36,12 @@ local function IsPrimaryPress(Input)
 end
 
 local function IsSecondaryPress(Input)
-    if IsTouchDevice then
-        return false
-    end
+    if IsTouchDevice then return false end
     return Input.UserInputType == Enum.UserInputType.MouseButton2
 end
 
 local function IsPrimaryHeld()
-    if IsTouchDevice then
-        return #InputService:GetMouseLocations() > 0
-    end
+    if IsTouchDevice then return #InputService:GetMouseLocations() > 0 end
     return InputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1)
 end
 
@@ -67,30 +62,22 @@ getgenv().Options = Options;
 local QuorumLib = {
     Registry = {};
     RegistryMap = {},
-
     HudRegistry = {},
-
     FontColor = Color3.fromRGB(255, 255, 255);
     MainColor = Color3.fromRGB(26, 27, 38);
     BackgroundColor = Color3.fromRGB(22, 22, 30);
     AccentColor = Color3.fromRGB(122, 162, 247);
     OutlineColor = Color3.fromRGB(41, 46, 66);
     RiskColor = Color3.fromRGB(255, 50, 50),
-
     Black = Color3.new(0, 0, 0);
     Font = Enum.Font.Code,
-
     OpenedFrames = {};
     DependencyBoxes = {};
-
     Signals = {};
     ScreenGui = ScreenGui;
-
     UseCustomCursor = true;
     MobileToggle = nil;
     KeybindFrame = nil;
-    
-    -- Новые переменные для курсора
     CursorThread = nil;
     CursorDrawing = nil;
     CursorOutlineDrawing = nil;
@@ -102,7 +89,6 @@ local Hue = 0
 
 table.insert(QuorumLib.Signals, RenderStepped:Connect(function(Delta)
     RainbowStep = RainbowStep + Delta
-
     if RainbowStep >= (1 / 60) then
         RainbowStep = 0
         Hue = Hue + (1 / 400);
@@ -380,9 +366,9 @@ function QuorumLib:GiveSignal(Signal)
     table.insert(QuorumLib.Signals, Signal)
 end
 
--- ИСПРАВЛЕННЫЙ КУРСОР
+-- ИСПРАВЛЕННЫЙ КУРСОР (включая обход LockCenter)
 local function SpawnCustomCursor()
-    if QuorumLib.CursorThread then return end -- Уже запущен
+    if QuorumLib.CursorThread then return end
     if IsTouchDevice then return end
 
     local InitialState = InputService.MouseIconEnabled;
@@ -401,6 +387,7 @@ local function SpawnCustomCursor()
     QuorumLib.CursorThread = task.spawn(function()
         while QuorumLib.MenuToggled and QuorumLib.UseCustomCursor and ScreenGui.Parent do
             InputService.MouseIconEnabled = false;
+            InputService.MouseBehavior = Enum.MouseBehavior.Default -- Принудительно отвязываем от центра
             
             local mPos = InputService:GetMouseLocation();
             QuorumLib.CursorDrawing.Color = QuorumLib.AccentColor;
@@ -814,10 +801,7 @@ do
                 );
 
                 Button.InputBegan:Connect(function(Input)
-                    if not IsPrimaryPress(Input) then
-                        return
-                    end
-
+                    if not IsPrimaryPress(Input) then return end
                     Callback()
                 end)
             end
@@ -833,7 +817,6 @@ do
                 end
                 ColorPicker:SetValueRGB(QuorumLib.ColorClipboard)
             end)
-
 
             ContextMenu:AddOption('Copy HEX', function()
                 pcall(setclipboard, ColorPicker.Value:ToHex())
@@ -875,7 +858,6 @@ do
                     ColorPicker.Hue, ColorPicker.Sat, ColorPicker.Vib = Color3.toHSV(result)
                 end
             end
-
             ColorPicker:Display()
         end)
 
@@ -886,7 +868,6 @@ do
                     ColorPicker.Hue, ColorPicker.Sat, ColorPicker.Vib = Color3.toHSV(Color3.fromRGB(r, g, b))
                 end
             end
-
             ColorPicker:Display()
         end)
 
@@ -926,8 +907,7 @@ do
                     Frame.Visible = false;
                     QuorumLib.OpenedFrames[Frame] = nil;
                 end;
-            end;
-
+            end
             PickerFrameOuter.Visible = true;
             QuorumLib.OpenedFrames[PickerFrameOuter] = true;
         end;
@@ -957,18 +937,14 @@ do
                 local MinX = SatVibMap.AbsolutePosition.X;
                 local MaxX = MinX + SatVibMap.AbsoluteSize.X;
                 local MouseX = math.clamp(M.X, MinX, MaxX);
-
                 local MinY = SatVibMap.AbsolutePosition.Y;
                 local MaxY = MinY + SatVibMap.AbsoluteSize.Y;
                 local MouseY = math.clamp(M.Y, MinY, MaxY);
-
                 ColorPicker.Sat = (MouseX - MinX) / (MaxX - MinX);
                 ColorPicker.Vib = 1 - ((MouseY - MinY) / (MaxY - MinY));
                 ColorPicker:Display();
-
                 RenderStepped:Wait();
             end;
-
             QuorumLib:AttemptSave();
         end);
 
@@ -979,13 +955,10 @@ do
                 local MinY = HueSelectorInner.AbsolutePosition.Y;
                 local MaxY = MinY + HueSelectorInner.AbsoluteSize.Y;
                 local MouseY = math.clamp(M.Y, MinY, MaxY);
-
                 ColorPicker.Hue = ((MouseY - MinY) / (MaxY - MinY));
                 ColorPicker:Display();
-
                 RenderStepped:Wait();
             end;
-
             QuorumLib:AttemptSave();
         end);
 
@@ -1011,14 +984,10 @@ do
                     local MinX = TransparencyBoxInner.AbsolutePosition.X;
                     local MaxX = MinX + TransparencyBoxInner.AbsoluteSize.X;
                     local MouseX = math.clamp(M.X, MinX, MaxX);
-
                     ColorPicker.Transparency = 1 - ((MouseX - MinX) / (MaxX - MinX));
-
                     ColorPicker:Display();
-
                     RenderStepped:Wait();
                 end;
-
                 QuorumLib:AttemptSave();
             end);
         end;
@@ -1027,18 +996,14 @@ do
             if IsPrimaryPress(Input) then
                 local M = GetCursorPosition()
                 local AbsPos, AbsSize = PickerFrameOuter.AbsolutePosition, PickerFrameOuter.AbsoluteSize;
-
                 if M.X < AbsPos.X or M.X > AbsPos.X + AbsSize.X
                     or M.Y < (AbsPos.Y - 20 - 1) or M.Y > AbsPos.Y + AbsSize.Y then
-
                     ColorPicker:Hide();
                 end;
-
                 if not QuorumLib:IsMouseOverFrame(ContextMenu.Container) then
                     ContextMenu:Hide()
                 end
             end;
-
             if IsSecondaryPress(Input) and ContextMenu.Container.Visible then
                 if not QuorumLib:IsMouseOverFrame(ContextMenu.Container) and not QuorumLib:IsMouseOverFrame(DisplayFrame) then
                     ContextMenu:Hide()
@@ -1048,9 +1013,7 @@ do
 
         ColorPicker:Display();
         ColorPicker.DisplayFrame = DisplayFrame
-
         Options[Idx] = ColorPicker;
-
         return self;
     end;
 
@@ -1058,17 +1021,15 @@ do
         local ParentObj = self;
         local ToggleLabel = self.TextLabel;
         local Container = self.Container;
-
         assert(Info.Default, 'AddKeyPicker: Missing default value.');
 
         local KeyPicker = {
             Value = Info.Default;
             Toggled = false;
-            Mode = Info.Mode or 'Toggle'; -- Always, Toggle, Hold
+            Mode = Info.Mode or 'Toggle';
             Type = 'KeyPicker';
             Callback = Info.Callback or function(Value) end;
             ChangedCallback = Info.ChangedCallback or function(New) end;
-
             SyncToggleState = Info.SyncToggleState or false;
         };
 
@@ -1169,18 +1130,14 @@ do
                 for _, Button in next, ModeButtons do
                     Button:Deselect();
                 end;
-
                 KeyPicker.Mode = Mode;
-
                 Label.TextColor3 = QuorumLib.AccentColor;
                 QuorumLib.RegistryMap[Label].Properties.TextColor3 = 'AccentColor';
-
                 ModeSelectOuter.Visible = false;
             end;
 
             function ModeButton:Deselect()
                 KeyPicker.Mode = nil;
-
                 Label.TextColor3 = QuorumLib.FontColor;
                 QuorumLib.RegistryMap[Label].Properties.TextColor3 = 'FontColor';
             end;
@@ -1195,25 +1152,19 @@ do
             if Mode == KeyPicker.Mode then
                 ModeButton:Select();
             end;
-
             ModeButtons[Mode] = ModeButton;
         end;
 
         function KeyPicker:Update()
             if Info.NoUI then return; end;
-
             local State = KeyPicker:GetState();
-
             ContainerLabel.Text = string.format('[%s] %s (%s)', KeyPicker.Value, Info.Text, KeyPicker.Mode);
-
             ContainerLabel.Visible = true;
             ContainerLabel.TextColor3 = State and QuorumLib.AccentColor or QuorumLib.FontColor;
-
             QuorumLib.RegistryMap[ContainerLabel].Properties.TextColor3 = State and 'AccentColor' or 'FontColor';
 
             local YSize = 0
             local XSize = 0
-
             for _, Label in next, QuorumLib.KeybindContainer:GetChildren() do
                 if Label:IsA('TextLabel') and Label.Visible then
                     YSize = YSize + 18;
@@ -1222,7 +1173,6 @@ do
                     end
                 end
             end;
-
             QuorumLib.KeybindFrame.Size = UDim2.new(0, math.max(XSize + 10, 210), 0, YSize + 23)
         end;
 
@@ -1251,24 +1201,18 @@ do
             KeyPicker:Update();
         end;
 
-        function KeyPicker:OnClick(Callback)
-            KeyPicker.Clicked = Callback
-        end
-
+        function KeyPicker:OnClick(Callback) KeyPicker.Clicked = Callback end
         function KeyPicker:OnChanged(Callback)
             KeyPicker.Changed = Callback
             Callback(KeyPicker.Value)
         end
 
-        if ParentObj.Addons then
-            table.insert(ParentObj.Addons, KeyPicker)
-        end
+        if ParentObj.Addons then table.insert(ParentObj.Addons, KeyPicker) end
 
         function KeyPicker:DoClick()
             if ParentObj.Type == 'Toggle' and KeyPicker.SyncToggleState then
                 ParentObj:SetValue(not ParentObj.Value)
             end
-
             QuorumLib:SafeCallback(KeyPicker.Callback, KeyPicker.Toggled)
             QuorumLib:SafeCallback(KeyPicker.Clicked, KeyPicker.Toggled)
         end
@@ -1278,17 +1222,12 @@ do
         PickOuter.InputBegan:Connect(function(Input)
             if IsPrimaryPress(Input) and not QuorumLib:MouseIsOverOpenedFrame() then
                 Picking = true;
-
                 DisplayLabel.Text = '';
-
                 local Break;
                 local Text = '';
-
                 task.spawn(function()
                     while (not Break) do
-                        if Text == '...' then
-                            Text = '';
-                        end;
+                        if Text == '...' then Text = ''; end;
                         Text = Text .. '.';
                         DisplayLabel.Text = Text;
                         wait(0.4);
@@ -1296,11 +1235,9 @@ do
                 end);
 
                 wait(0.2);
-
                 local Event;
                 Event = InputService.InputBegan:Connect(function(Input)
                     local Key;
-
                     if Input.UserInputType == Enum.UserInputType.Keyboard then
                         Key = Input.KeyCode.Name;
                     elseif Input.UserInputType == Enum.UserInputType.MouseButton1 then
@@ -1310,20 +1247,14 @@ do
                     elseif Input.UserInputType == Enum.UserInputType.Touch then
                         Key = 'Touch';
                     end;
-
                     if not Key then return end
-
                     Break = true;
                     Picking = false;
-
                     DisplayLabel.Text = Key;
                     KeyPicker.Value = Key;
-
                     QuorumLib:SafeCallback(KeyPicker.ChangedCallback, Input.KeyCode or Input.UserInputType)
                     QuorumLib:SafeCallback(KeyPicker.Changed, Input.KeyCode or Input.UserInputType)
-
                     QuorumLib:AttemptSave();
-
                     Event:Disconnect();
                 end);
             elseif IsSecondaryPress(Input) and not QuorumLib:MouseIsOverOpenedFrame() then
@@ -1335,7 +1266,6 @@ do
             if (not Picking) then
                 if KeyPicker.Mode == 'Toggle' then
                     local Key = KeyPicker.Value;
-
                     if Key == 'MB1' or Key == 'MB2' then
                         if Key == 'MB1' and Input.UserInputType == Enum.UserInputType.MouseButton1
                         or Key == 'MB2' and Input.UserInputType == Enum.UserInputType.MouseButton2 then
@@ -1349,32 +1279,25 @@ do
                         end;
                     end;
                 end;
-
                 KeyPicker:Update();
             end;
 
             if IsPrimaryPress(Input) then
                 local M = GetCursorPosition()
                 local AbsPos, AbsSize = ModeSelectOuter.AbsolutePosition, ModeSelectOuter.AbsoluteSize;
-
                 if M.X < AbsPos.X or M.X > AbsPos.X + AbsSize.X
                     or M.Y < (AbsPos.Y - 20 - 1) or M.Y > AbsPos.Y + AbsSize.Y then
-
                     ModeSelectOuter.Visible = false;
                 end;
             end;
         end))
 
         QuorumLib:GiveSignal(InputService.InputEnded:Connect(function(Input)
-            if (not Picking) then
-                KeyPicker:Update();
-            end;
+            if (not Picking) then KeyPicker:Update(); end;
         end))
 
         KeyPicker:Update();
-
         Options[Idx] = KeyPicker;
-
         return self;
     end;
 
@@ -1392,7 +1315,6 @@ do
     function Funcs:AddBlank(Size)
         local Groupbox = self;
         local Container = Groupbox.Container;
-
         QuorumLib:Create('Frame', {
             BackgroundTransparency = 1;
             Size = UDim2.new(1, 0, 0, Size);
@@ -1403,10 +1325,8 @@ do
 
     function Funcs:AddLabel(Text, DoesWrap)
         local Label = {};
-
         local Groupbox = self;
         local Container = Groupbox.Container;
-
         local TextLabel = QuorumLib:CreateLabel({
             Size = UDim2.new(1, -4, 0, 15);
             TextSize = 14;
@@ -1435,27 +1355,20 @@ do
 
         function Label:SetText(Text)
             TextLabel.Text = Text
-
             if DoesWrap then
                 local Y = select(2, QuorumLib:GetTextBounds(Text, QuorumLib.Font, 14, Vector2.new(TextLabel.AbsoluteSize.X, math.huge)))
                 TextLabel.Size = UDim2.new(1, -4, 0, Y)
             end
-
             Groupbox:Resize();
         end;
 
-        if (not DoesWrap) then
-            setmetatable(Label, BaseAddons);
-        end;
-
+        if (not DoesWrap) then setmetatable(Label, BaseAddons); end;
         Groupbox:AddBlank(5);
         Groupbox:Resize();
-
         return Label;
     end;
 
     function Funcs:AddButton(...)
-        -- TODO: Eventually redo this
         local Button = {};
         local function ProcessButtonParams(Class, Obj, ...)
             local Props = select(1, ...)
@@ -1468,12 +1381,10 @@ do
                 Obj.Text = select(1, ...)
                 Obj.Func = select(2, ...)
             end
-
             assert(type(Obj.Func) == 'function', 'AddButton: `Func` callback is missing.');
         end
 
         ProcessButtonParams('Button', Button, ...)
-
         local Groupbox = self;
         local Container = Groupbox.Container;
 
@@ -1511,14 +1422,8 @@ do
                 Parent = Inner;
             });
 
-            QuorumLib:AddToRegistry(Outer, {
-                BorderColor3 = 'Black';
-            });
-
-            QuorumLib:AddToRegistry(Inner, {
-                BackgroundColor3 = 'MainColor';
-                BorderColor3 = 'OutlineColor';
-            });
+            QuorumLib:AddToRegistry(Outer, { BorderColor3 = 'Black'; });
+            QuorumLib:AddToRegistry(Inner, { BackgroundColor3 = 'MainColor'; BorderColor3 = 'OutlineColor'; });
 
             QuorumLib:OnHighlight(Outer, Outer,
                 { BorderColor3 = 'AccentColor' },
@@ -1532,7 +1437,6 @@ do
             local function WaitForEvent(event, timeout, validator)
                 local bindable = Instance.new('BindableEvent')
                 local connection = event:Once(function(...)
-
                     if type(validator) == 'function' and validator(...) then
                         bindable:Fire(true)
                     else
@@ -1547,14 +1451,8 @@ do
             end
 
             local function ValidateClick(Input)
-                if QuorumLib:MouseIsOverOpenedFrame() then
-                    return false
-                end
-
-                if not IsPrimaryPress(Input) then
-                    return false
-                end
-
+                if QuorumLib:MouseIsOverOpenedFrame() then return false end
+                if not IsPrimaryPress(Input) then return false end
                 return true
             end
 
@@ -1565,24 +1463,16 @@ do
                 if Button.DoubleClick then
                     QuorumLib:RemoveFromRegistry(Button.Label)
                     QuorumLib:AddToRegistry(Button.Label, { TextColor3 = 'AccentColor' })
-
                     Button.Label.TextColor3 = QuorumLib.AccentColor
                     Button.Label.Text = 'Are you sure?'
                     Button.Locked = true
-
                     local clicked = WaitForEvent(Button.Outer.InputBegan, 0.5, ValidateClick)
-
                     QuorumLib:RemoveFromRegistry(Button.Label)
                     QuorumLib:AddToRegistry(Button.Label, { TextColor3 = 'FontColor' })
-
                     Button.Label.TextColor3 = QuorumLib.FontColor
                     Button.Label.Text = Button.Text
                     task.defer(rawset, Button, 'Locked', false)
-
-                    if clicked then
-                        QuorumLib:SafeCallback(Button.Func)
-                    end
-
+                    if clicked then QuorumLib:SafeCallback(Button.Func) end
                     return
                 end
 
@@ -1592,63 +1482,42 @@ do
 
         Button.Outer, Button.Inner, Button.Label = CreateBaseButton(Button)
         Button.Outer.Parent = Container
-
         InitEvents(Button)
 
         function Button:AddTooltip(tooltip)
-            if type(tooltip) == 'string' then
-                QuorumLib:AddToolTip(tooltip, self.Outer)
-            end
+            if type(tooltip) == 'string' then QuorumLib:AddToolTip(tooltip, self.Outer) end
             return self
         end
 
-
         function Button:AddButton(...)
             local SubButton = {}
-
             ProcessButtonParams('SubButton', SubButton, ...)
-
             self.Outer.Size = UDim2.new(0.5, -2, 0, 20)
-
             SubButton.Outer, SubButton.Inner, SubButton.Label = CreateBaseButton(SubButton)
-
             SubButton.Outer.Position = UDim2.new(1, 3, 0, 0)
             SubButton.Outer.Size = UDim2.fromOffset(self.Outer.AbsoluteSize.X - 2, self.Outer.AbsoluteSize.Y)
             SubButton.Outer.Parent = self.Outer
 
             function SubButton:AddTooltip(tooltip)
-                if type(tooltip) == 'string' then
-                    QuorumLib:AddToolTip(tooltip, self.Outer)
-                end
+                if type(tooltip) == 'string' then QuorumLib:AddToolTip(tooltip, self.Outer) end
                 return SubButton
             end
 
-            if type(SubButton.Tooltip) == 'string' then
-                SubButton:AddTooltip(SubButton.Tooltip)
-            end
-
+            if type(SubButton.Tooltip) == 'string' then SubButton:AddTooltip(SubButton.Tooltip) end
             InitEvents(SubButton)
             return SubButton
         end
 
-        if type(Button.Tooltip) == 'string' then
-            Button:AddTooltip(Button.Tooltip)
-        end
-
+        if type(Button.Tooltip) == 'string' then Button:AddTooltip(Button.Tooltip) end
         Groupbox:AddBlank(5);
         Groupbox:Resize();
-
         return Button;
     end;
 
     function Funcs:AddDivider()
         local Groupbox = self;
         local Container = self.Container
-
-        local Divider = {
-            Type = 'Divider',
-        }
-
+        local Divider = { Type = 'Divider', }
         Groupbox:AddBlank(2);
         local DividerOuter = QuorumLib:Create('Frame', {
             BackgroundColor3 = Color3.new(0, 0, 0);
@@ -1667,14 +1536,8 @@ do
             Parent = DividerOuter;
         });
 
-        QuorumLib:AddToRegistry(DividerOuter, {
-            BorderColor3 = 'Black';
-        });
-
-        QuorumLib:AddToRegistry(DividerInner, {
-            BackgroundColor3 = 'MainColor';
-            BorderColor3 = 'OutlineColor';
-        });
+        QuorumLib:AddToRegistry(DividerOuter, { BorderColor3 = 'Black'; });
+        QuorumLib:AddToRegistry(DividerInner, { BackgroundColor3 = 'MainColor'; BorderColor3 = 'OutlineColor'; });
 
         Groupbox:AddBlank(9);
         Groupbox:Resize();
@@ -1682,7 +1545,6 @@ do
 
     function Funcs:AddInput(Idx, Info)
         assert(Info.Text, 'AddInput: Missing `Text` string.')
-
         local Textbox = {
             Value = Info.Default or '';
             Numeric = Info.Numeric or false;
@@ -1693,7 +1555,6 @@ do
 
         local Groupbox = self;
         local Container = Groupbox.Container;
-
         local InputLabel = QuorumLib:CreateLabel({
             Size = UDim2.new(1, 0, 0, 15);
             TextSize = 14;
@@ -1704,7 +1565,6 @@ do
         });
 
         Groupbox:AddBlank(1);
-
         local TextBoxOuter = QuorumLib:Create('Frame', {
             BackgroundColor3 = Color3.new(0, 0, 0);
             BorderColor3 = Color3.new(0, 0, 0);
@@ -1722,19 +1582,10 @@ do
             Parent = TextBoxOuter;
         });
 
-        QuorumLib:AddToRegistry(TextBoxInner, {
-            BackgroundColor3 = 'MainColor';
-            BorderColor3 = 'OutlineColor';
-        });
+        QuorumLib:AddToRegistry(TextBoxInner, { BackgroundColor3 = 'MainColor'; BorderColor3 = 'OutlineColor'; });
+        QuorumLib:OnHighlight(TextBoxOuter, TextBoxOuter, { BorderColor3 = 'AccentColor' }, { BorderColor3 = 'Black' });
 
-        QuorumLib:OnHighlight(TextBoxOuter, TextBoxOuter,
-            { BorderColor3 = 'AccentColor' },
-            { BorderColor3 = 'Black' }
-        );
-
-        if type(Info.Tooltip) == 'string' then
-            QuorumLib:AddToolTip(Info.Tooltip, TextBoxOuter)
-        end
+        if type(Info.Tooltip) == 'string' then QuorumLib:AddToolTip(Info.Tooltip, TextBoxOuter) end
 
         QuorumLib:Create('UIGradient', {
             Color = ColorSequence.new({
@@ -1773,19 +1624,12 @@ do
         QuorumLib:ApplyTextStroke(Box);
 
         function Textbox:SetValue(Text)
-            if Info.MaxLength and #Text > Info.MaxLength then
-                Text = Text:sub(1, Info.MaxLength);
-            end;
-
+            if Info.MaxLength and #Text > Info.MaxLength then Text = Text:sub(1, Info.MaxLength); end;
             if Textbox.Numeric then
-                if (not tonumber(Text)) and Text:len() > 0 then
-                    Text = Textbox.Value
-                end
+                if (not tonumber(Text)) and Text:len() > 0 then Text = Textbox.Value end
             end
-
             Textbox.Value = Text;
             Box.Text = Text;
-
             QuorumLib:SafeCallback(Textbox.Callback, Textbox.Value);
             QuorumLib:SafeCallback(Textbox.Changed, Textbox.Value);
         end;
@@ -1806,7 +1650,6 @@ do
         local function Update()
             local PADDING = 2
             local reveal = Container.AbsoluteSize.X
-
             if not Box:IsFocused() or Box.TextBounds.X <= reveal - 2 * PADDING then
                 Box.Position = UDim2.new(0, PADDING, 0, 0)
             else
@@ -1815,7 +1658,6 @@ do
                     local subtext = string.sub(Box.Text, 1, cursor-1)
                     local width = TextService:GetTextSize(subtext, Box.TextSize, Box.Font, Vector2.new(math.huge, math.huge)).X
                     local currentCursorPos = Box.Position.X.Offset + width
-
                     if currentCursorPos < PADDING then
                         Box.Position = UDim2.fromOffset(PADDING-width, 0)
                     elseif currentCursorPos > reveal - PADDING - 1 then
@@ -1826,15 +1668,11 @@ do
         end
 
         task.spawn(Update)
-
         Box:GetPropertyChangedSignal('Text'):Connect(Update)
         Box:GetPropertyChangedSignal('CursorPosition'):Connect(Update)
         Box.FocusLost:Connect(Update)
         Box.Focused:Connect(Update)
-
-        QuorumLib:AddToRegistry(Box, {
-            TextColor3 = 'FontColor';
-        });
+        QuorumLib:AddToRegistry(Box, { TextColor3 = 'FontColor'; });
 
         function Textbox:OnChanged(Func)
             Textbox.Changed = Func;
@@ -1843,15 +1681,12 @@ do
 
         Groupbox:AddBlank(5);
         Groupbox:Resize();
-
         Options[Idx] = Textbox;
-
         return Textbox;
     end;
 
     function Funcs:AddToggle(Idx, Info)
         assert(Info.Text, 'AddInput: Missing `Text` string.')
-
         local Toggle = {
             Value = Info.Default or false;
             Type = 'Toggle';
@@ -1862,7 +1697,6 @@ do
 
         local Groupbox = self;
         local Container = Groupbox.Container;
-
         local ToggleOuter = QuorumLib:Create('Frame', {
             BackgroundColor3 = Color3.new(0, 0, 0);
             BorderColor3 = Color3.new(0, 0, 0);
@@ -1871,9 +1705,7 @@ do
             Parent = Container;
         });
 
-        QuorumLib:AddToRegistry(ToggleOuter, {
-            BorderColor3 = 'Black';
-        });
+        QuorumLib:AddToRegistry(ToggleOuter, { BorderColor3 = 'Black'; });
 
         local ToggleInner = QuorumLib:Create('Frame', {
             BackgroundColor3 = QuorumLib.MainColor;
@@ -1884,10 +1716,7 @@ do
             Parent = ToggleOuter;
         });
 
-        QuorumLib:AddToRegistry(ToggleInner, {
-            BackgroundColor3 = 'MainColor';
-            BorderColor3 = 'OutlineColor';
-        });
+        QuorumLib:AddToRegistry(ToggleInner, { BackgroundColor3 = 'MainColor'; BorderColor3 = 'OutlineColor'; });
 
         local ToggleLabel = QuorumLib:CreateLabel({
             Size = UDim2.new(0, 216, 1, 0);
@@ -1914,23 +1743,14 @@ do
             Parent = ToggleOuter;
         });
 
-        QuorumLib:OnHighlight(ToggleRegion, ToggleOuter,
-            { BorderColor3 = 'AccentColor' },
-            { BorderColor3 = 'Black' }
-        );
+        QuorumLib:OnHighlight(ToggleRegion, ToggleOuter, { BorderColor3 = 'AccentColor' }, { BorderColor3 = 'Black' });
 
-        function Toggle:UpdateColors()
-            Toggle:Display();
-        end;
-
-        if type(Info.Tooltip) == 'string' then
-            QuorumLib:AddToolTip(Info.Tooltip, ToggleRegion)
-        end
+        function Toggle:UpdateColors() Toggle:Display(); end;
+        if type(Info.Tooltip) == 'string' then QuorumLib:AddToolTip(Info.Tooltip, ToggleRegion) end
 
         function Toggle:Display()
             ToggleInner.BackgroundColor3 = Toggle.Value and QuorumLib.AccentColor or QuorumLib.MainColor;
             ToggleInner.BorderColor3 = Toggle.Value and QuorumLib.AccentColorDark or QuorumLib.OutlineColor;
-
             QuorumLib.RegistryMap[ToggleInner].Properties.BackgroundColor3 = Toggle.Value and 'AccentColor' or 'MainColor';
             QuorumLib.RegistryMap[ToggleInner].Properties.BorderColor3 = Toggle.Value and 'AccentColorDark' or 'OutlineColor';
         end;
@@ -1942,17 +1762,14 @@ do
 
         function Toggle:SetValue(Bool)
             Bool = (not not Bool);
-
             Toggle.Value = Bool;
             Toggle:Display();
-
             for _, Addon in next, Toggle.Addons do
                 if Addon.Type == 'KeyPicker' and Addon.SyncToggleState then
                     Addon.Toggled = Bool
                     Addon:Update()
                 end
             end
-
             QuorumLib:SafeCallback(Toggle.Callback, Toggle.Value);
             QuorumLib:SafeCallback(Toggle.Changed, Toggle.Value);
             QuorumLib:UpdateDependencyBoxes();
@@ -1978,11 +1795,8 @@ do
         Toggle.TextLabel = ToggleLabel;
         Toggle.Container = Container;
         setmetatable(Toggle, BaseAddons);
-
         Toggles[Idx] = Toggle;
-
         QuorumLib:UpdateDependencyBoxes();
-
         return Toggle;
     end;
 
@@ -2016,7 +1830,6 @@ do
                 ZIndex = 5;
                 Parent = Container;
             });
-
             Groupbox:AddBlank(3);
         end
 
@@ -2028,9 +1841,7 @@ do
             Parent = Container;
         });
 
-        QuorumLib:AddToRegistry(SliderOuter, {
-            BorderColor3 = 'Black';
-        });
+        QuorumLib:AddToRegistry(SliderOuter, { BorderColor3 = 'Black'; });
 
         local SliderInner = QuorumLib:Create('Frame', {
             BackgroundColor3 = QuorumLib.MainColor;
@@ -2041,10 +1852,7 @@ do
             Parent = SliderOuter;
         });
 
-        QuorumLib:AddToRegistry(SliderInner, {
-            BackgroundColor3 = 'MainColor';
-            BorderColor3 = 'OutlineColor';
-        });
+        QuorumLib:AddToRegistry(SliderInner, { BackgroundColor3 = 'MainColor'; BorderColor3 = 'OutlineColor'; });
 
         local Fill = QuorumLib:Create('Frame', {
             BackgroundColor3 = QuorumLib.AccentColor;
@@ -2054,10 +1862,7 @@ do
             Parent = SliderInner;
         });
 
-        QuorumLib:AddToRegistry(Fill, {
-            BackgroundColor3 = 'AccentColor';
-            BorderColor3 = 'AccentColorDark';
-        });
+        QuorumLib:AddToRegistry(Fill, { BackgroundColor3 = 'AccentColor'; BorderColor3 = 'AccentColorDark'; });
 
         local HideBorderRight = QuorumLib:Create('Frame', {
             BackgroundColor3 = QuorumLib.AccentColor;
@@ -2068,9 +1873,7 @@ do
             Parent = Fill;
         });
 
-        QuorumLib:AddToRegistry(HideBorderRight, {
-            BackgroundColor3 = 'AccentColor';
-        });
+        QuorumLib:AddToRegistry(HideBorderRight, { BackgroundColor3 = 'AccentColor'; });
 
         local DisplayLabel = QuorumLib:CreateLabel({
             Size = UDim2.new(1, 0, 1, 0);
@@ -2080,14 +1883,8 @@ do
             Parent = SliderInner;
         });
 
-        QuorumLib:OnHighlight(SliderOuter, SliderOuter,
-            { BorderColor3 = 'AccentColor' },
-            { BorderColor3 = 'Black' }
-        );
-
-        if type(Info.Tooltip) == 'string' then
-            QuorumLib:AddToolTip(Info.Tooltip, SliderOuter)
-        end
+        QuorumLib:OnHighlight(SliderOuter, SliderOuter, { BorderColor3 = 'AccentColor' }, { BorderColor3 = 'Black' });
+        if type(Info.Tooltip) == 'string' then QuorumLib:AddToolTip(Info.Tooltip, SliderOuter) end
 
         function Slider:UpdateColors()
             Fill.BackgroundColor3 = QuorumLib.AccentColor;
@@ -2096,7 +1893,6 @@ do
 
         function Slider:Display()
             local Suffix = Info.Suffix or '';
-
             if Info.Compact then
                 DisplayLabel.Text = Info.Text .. ': ' .. Slider.Value .. Suffix
             elseif Info.HideMax then
@@ -2107,7 +1903,6 @@ do
 
             local X = math.ceil(QuorumLib:MapValue(Slider.Value, Slider.Min, Slider.Max, 0, Slider.MaxSize));
             Fill.Size = UDim2.new(0, X, 1, 0);
-
             HideBorderRight.Visible = not (X == Slider.MaxSize or X == 0);
         end;
 
@@ -2117,10 +1912,7 @@ do
         end;
 
         local function Round(Value)
-            if Slider.Rounding == 0 then
-                return math.floor(Value);
-            end;
-
+            if Slider.Rounding == 0 then return math.floor(Value); end;
             return tonumber(string.format('%.' .. Slider.Rounding .. 'f', Value))
         end;
 
@@ -2130,14 +1922,10 @@ do
 
         function Slider:SetValue(Str)
             local Num = tonumber(Str);
-
             if (not Num) then return; end;
-
             Num = math.clamp(Num, Slider.Min, Slider.Max);
-
             Slider.Value = Num;
             Slider:Display();
-
             QuorumLib:SafeCallback(Slider.Callback, Slider.Value);
             QuorumLib:SafeCallback(Slider.Changed, Slider.Value);
         end;
@@ -2147,25 +1935,19 @@ do
                 local mPos = GetInputPosition(Input).X;
                 local gPos = Fill.Size.X.Offset;
                 local Diff = mPos - (Fill.AbsolutePosition.X + gPos);
-
                 while IsPrimaryHeld() do
                     local nMPos = GetCursorPosition().X;
                     local nX = math.clamp(gPos + (nMPos - mPos) + Diff, 0, Slider.MaxSize);
-
                     local nValue = Slider:GetValueFromXOffset(nX);
                     local OldValue = Slider.Value;
                     Slider.Value = nValue;
-
                     Slider:Display();
-
                     if nValue ~= OldValue then
                         QuorumLib:SafeCallback(Slider.Callback, Slider.Value);
                         QuorumLib:SafeCallback(Slider.Changed, Slider.Value);
                     end;
-
                     RenderStepped:Wait();
                 end;
-
                 QuorumLib:AttemptSave();
             end;
         end);
@@ -2173,9 +1955,7 @@ do
         Slider:Display();
         Groupbox:AddBlank(Info.BlankSize or 6);
         Groupbox:Resize();
-
         Options[Idx] = Slider;
-
         return Slider;
     end;
 
@@ -2186,7 +1966,7 @@ do
         elseif Info.SpecialType == 'Team' then
             Info.Values = GetTeamsString();
             Info.AllowNull = true;
-        end;
+        end
 
         assert(Info.Values, 'AddDropdown: Missing dropdown value list.');
         assert(Info.AllowNull or Info.Default, 'AddDropdown: Missing default value. Pass `AllowNull` as true if this was intentional.')
@@ -2216,7 +1996,6 @@ do
                 ZIndex = 5;
                 Parent = Container;
             });
-
             Groupbox:AddBlank(3);
         end
 
@@ -2234,9 +2013,7 @@ do
             Parent = Container;
         });
 
-        QuorumLib:AddToRegistry(DropdownOuter, {
-            BorderColor3 = 'Black';
-        });
+        QuorumLib:AddToRegistry(DropdownOuter, { BorderColor3 = 'Black'; });
 
         local DropdownInner = QuorumLib:Create('Frame', {
             BackgroundColor3 = QuorumLib.MainColor;
@@ -2247,10 +2024,7 @@ do
             Parent = DropdownOuter;
         });
 
-        QuorumLib:AddToRegistry(DropdownInner, {
-            BackgroundColor3 = 'MainColor';
-            BorderColor3 = 'OutlineColor';
-        });
+        QuorumLib:AddToRegistry(DropdownInner, { BackgroundColor3 = 'MainColor'; BorderColor3 = 'OutlineColor'; });
 
         QuorumLib:Create('UIGradient', {
             Color = ColorSequence.new({
@@ -2282,14 +2056,8 @@ do
             Parent = DropdownInner;
         });
 
-        QuorumLib:OnHighlight(DropdownOuter, DropdownOuter,
-            { BorderColor3 = 'AccentColor' },
-            { BorderColor3 = 'Black' }
-        );
-
-        if type(Info.Tooltip) == 'string' then
-            QuorumLib:AddToolTip(Info.Tooltip, DropdownOuter)
-        end
+        QuorumLib:OnHighlight(DropdownOuter, DropdownOuter, { BorderColor3 = 'AccentColor' }, { BorderColor3 = 'Black' });
+        if type(Info.Tooltip) == 'string' then QuorumLib:AddToolTip(Info.Tooltip, DropdownOuter) end
 
         local MAX_DROPDOWN_ITEMS = 8;
 
@@ -2311,7 +2079,6 @@ do
 
         RecalculateListPosition();
         RecalculateListSize();
-
         DropdownOuter:GetPropertyChangedSignal('AbsolutePosition'):Connect(RecalculateListPosition);
 
         local ListInner = QuorumLib:Create('Frame', {
@@ -2324,10 +2091,7 @@ do
             Parent = ListOuter;
         });
 
-        QuorumLib:AddToRegistry(ListInner, {
-            BackgroundColor3 = 'MainColor';
-            BorderColor3 = 'OutlineColor';
-        });
+        QuorumLib:AddToRegistry(ListInner, { BackgroundColor3 = 'MainColor'; BorderColor3 = 'OutlineColor'; });
 
         local Scrolling = QuorumLib:Create('ScrollingFrame', {
             BackgroundTransparency = 1;
@@ -2336,17 +2100,13 @@ do
             Size = UDim2.new(1, 0, 1, 0);
             ZIndex = 21;
             Parent = ListInner;
-
             TopImage = 'rbxasset://textures/ui/Scroll/scroll-middle.png',
             BottomImage = 'rbxasset://textures/ui/Scroll/scroll-middle.png',
-
             ScrollBarThickness = 3,
             ScrollBarImageColor3 = QuorumLib.AccentColor,
         });
 
-        QuorumLib:AddToRegistry(Scrolling, {
-            ScrollBarImageColor3 = 'AccentColor'
-        })
+        QuorumLib:AddToRegistry(Scrolling, { ScrollBarImageColor3 = 'AccentColor' })
 
         QuorumLib:Create('UIListLayout', {
             Padding = UDim.new(0, 0);
@@ -2358,27 +2118,21 @@ do
         function Dropdown:Display()
             local Values = Dropdown.Values;
             local Str = '';
-
             if Info.Multi then
                 for Idx, Value in next, Values do
-                    if Dropdown.Value[Value] then
-                        Str = Str .. Value .. ', ';
-                    end;
+                    if Dropdown.Value[Value] then Str = Str .. Value .. ', '; end;
                 end;
                 Str = Str:sub(1, #Str - 2);
             else
                 Str = Dropdown.Value or '';
-            end;
-
+            end
             ItemList.Text = (Str == '' and '--' or Str);
         end;
 
         function Dropdown:GetActiveValues()
             if Info.Multi then
                 local T = {};
-                for Value, Bool in next, Dropdown.Value do
-                    table.insert(T, Value);
-                end;
+                for Value, Bool in next, Dropdown.Value do table.insert(T, Value); end;
                 return T;
             else
                 return Dropdown.Value and 1 or 0;
@@ -2388,20 +2142,14 @@ do
         function Dropdown:BuildDropdownList()
             local Values = Dropdown.Values;
             local Buttons = {};
-
             for _, Element in next, Scrolling:GetChildren() do
-                if not Element:IsA('UIListLayout') then
-                    Element:Destroy();
-                end;
-            end;
+                if not Element:IsA('UIListLayout') then Element:Destroy(); end;
+            end
 
             local Count = 0;
-
             for Idx, Value in next, Values do
                 local Table = {};
-
                 Count = Count + 1;
-
                 local Button = QuorumLib:Create('Frame', {
                     BackgroundColor3 = QuorumLib.MainColor;
                     BorderColor3 = QuorumLib.OutlineColor;
@@ -2412,10 +2160,7 @@ do
                     Parent = Scrolling;
                 });
 
-                QuorumLib:AddToRegistry(Button, {
-                    BackgroundColor3 = 'MainColor';
-                    BorderColor3 = 'OutlineColor';
-                });
+                QuorumLib:AddToRegistry(Button, { BackgroundColor3 = 'MainColor'; BorderColor3 = 'OutlineColor'; });
 
                 local ButtonLabel = QuorumLib:CreateLabel({
                     Active = false;
@@ -2434,7 +2179,6 @@ do
                 );
 
                 local Selected;
-
                 if Info.Multi then
                     Selected = Dropdown.Value[Value];
                 else
@@ -2446,8 +2190,7 @@ do
                         Selected = Dropdown.Value[Value];
                     else
                         Selected = Dropdown.Value == Value;
-                    end;
-
+                    end
                     ButtonLabel.TextColor3 = Selected and QuorumLib.AccentColor or QuorumLib.FontColor;
                     QuorumLib.RegistryMap[ButtonLabel].Properties.TextColor3 = Selected and 'AccentColor' or 'FontColor';
                 end;
@@ -2455,35 +2198,20 @@ do
                 ButtonLabel.InputBegan:Connect(function(Input)
                     if IsPrimaryPress(Input) then
                         local Try = not Selected;
-
                         if Dropdown:GetActiveValues() == 1 and (not Try) and (not Info.AllowNull) then
                         else
                             if Info.Multi then
                                 Selected = Try;
-                                if Selected then
-                                    Dropdown.Value[Value] = true;
-                                else
-                                    Dropdown.Value[Value] = nil;
-                                end;
+                                if Selected then Dropdown.Value[Value] = true; else Dropdown.Value[Value] = nil; end;
                             else
                                 Selected = Try;
-                                if Selected then
-                                    Dropdown.Value = Value;
-                                else
-                                    Dropdown.Value = nil;
-                                end;
-
-                                for _, OtherButton in next, Buttons do
-                                    OtherButton:UpdateButton();
-                                end;
+                                if Selected then Dropdown.Value = Value; else Dropdown.Value = nil; end;
+                                for _, OtherButton in next, Buttons do OtherButton:UpdateButton(); end;
                             end;
-
                             Table:UpdateButton();
                             Dropdown:Display();
-
                             QuorumLib:SafeCallback(Dropdown.Callback, Dropdown.Value);
                             QuorumLib:SafeCallback(Dropdown.Changed, Dropdown.Value);
-
                             QuorumLib:AttemptSave();
                         end;
                     end;
@@ -2491,20 +2219,16 @@ do
 
                 Table:UpdateButton();
                 Dropdown:Display();
-
                 Buttons[Button] = Table;
-            end;
+            end
 
             Scrolling.CanvasSize = UDim2.fromOffset(0, (Count * 20) + 1);
-
             local Y = math.clamp(Count * 20, 0, MAX_DROPDOWN_ITEMS * 20) + 1;
             RecalculateListSize(Y);
         end;
 
         function Dropdown:SetValues(NewValues)
-            if NewValues then
-                Dropdown.Values = NewValues;
-            end;
+            if NewValues then Dropdown.Values = NewValues; end;
             Dropdown:BuildDropdownList();
         end;
 
@@ -2529,32 +2253,25 @@ do
             if Dropdown.Multi then
                 local nTable = {};
                 for Value, Bool in next, Val do
-                    if table.find(Dropdown.Values, Value) then
-                        nTable[Value] = true
-                    end;
-                end;
+                    if table.find(Dropdown.Values, Value) then nTable[Value] = true end;
+                end
                 Dropdown.Value = nTable;
             else
                 if (not Val) then
                     Dropdown.Value = nil;
                 elseif table.find(Dropdown.Values, Val) then
                     Dropdown.Value = Val;
-                end;
-            end;
-
+                end
+            end
             Dropdown:BuildDropdownList();
-
             QuorumLib:SafeCallback(Dropdown.Callback, Dropdown.Value);
             QuorumLib:SafeCallback(Dropdown.Changed, Dropdown.Value);
         end;
 
         DropdownOuter.InputBegan:Connect(function(Input)
             if IsPrimaryPress(Input) and not QuorumLib:MouseIsOverOpenedFrame() then
-                if ListOuter.Visible then
-                    Dropdown:CloseDropdown();
-                else
-                    Dropdown:OpenDropdown();
-                end;
+                if ListOuter.Visible then Dropdown:CloseDropdown();
+                else Dropdown:OpenDropdown(); end
             end;
         end);
 
@@ -2562,12 +2279,10 @@ do
             if IsPrimaryPress(Input) then
                 local M = GetCursorPosition()
                 local AbsPos, AbsSize = ListOuter.AbsolutePosition, ListOuter.AbsoluteSize;
-
                 if M.X < AbsPos.X or M.X > AbsPos.X + AbsSize.X
                     or M.Y < (AbsPos.Y - 20 - 1) or M.Y > AbsPos.Y + AbsSize.Y then
-
                     Dropdown:CloseDropdown();
-                end;
+                end
             end;
         end);
 
@@ -2598,16 +2313,13 @@ do
                 end
                 if (not Info.Multi) then break end
             end
-
             Dropdown:BuildDropdownList();
             Dropdown:Display();
         end
 
         Groupbox:AddBlank(Info.BlankSize or 5);
         Groupbox:Resize();
-
         Options[Idx] = Dropdown;
-
         return Dropdown;
     end;
 
@@ -2648,14 +2360,12 @@ do
             for _, Dependency in next, Depbox.Dependencies do
                 local Elem = Dependency[1];
                 local Value = Dependency[2];
-
                 if Elem.Type == 'Toggle' and Elem.Value ~= Value then
                     Holder.Visible = false;
                     Depbox:Resize();
                     return;
-                end;
-            end;
-
+                end
+            end
             Holder.Visible = true;
             Depbox:Resize();
         end;
@@ -2665,8 +2375,7 @@ do
                 assert(type(Dependency) == 'table', 'SetupDependencies: Dependency is not of type `table`.');
                 assert(Dependency[1], 'SetupDependencies: Dependency is missing element argument.');
                 assert(Dependency[2] ~= nil, 'SetupDependencies: Dependency is missing value argument.');
-            end;
-
+            end
             Depbox.Dependencies = Dependencies;
             Depbox:Update();
         end;
@@ -2674,7 +2383,6 @@ do
         Depbox.Container = Frame;
         setmetatable(Depbox, BaseGroupbox);
         table.insert(QuorumLib.DependencyBoxes, Depbox);
-
         return Depbox;
     end;
 
@@ -2780,10 +2488,7 @@ do
         Parent = KeybindOuter;
     });
 
-    QuorumLib:AddToRegistry(KeybindInner, {
-        BackgroundColor3 = 'MainColor';
-        BorderColor3 = 'OutlineColor';
-    }, true);
+    QuorumLib:AddToRegistry(KeybindInner, { BackgroundColor3 = 'MainColor'; BorderColor3 = 'OutlineColor'; }, true);
 
     local ColorFrame = QuorumLib:Create('Frame', {
         BackgroundColor3 = QuorumLib.AccentColor;
@@ -2793,9 +2498,7 @@ do
         Parent = KeybindInner;
     });
 
-    QuorumLib:AddToRegistry(ColorFrame, {
-        BackgroundColor3 = 'AccentColor';
-    }, true);
+    QuorumLib:AddToRegistry(ColorFrame, { BackgroundColor3 = 'AccentColor'; }, true);
 
     local KeybindLabel = QuorumLib:CreateLabel({
         Size = UDim2.new(1, 0, 0, 20);
@@ -2863,10 +2566,7 @@ function QuorumLib:Notify(Text, Time)
         Parent = NotifyOuter;
     });
 
-    QuorumLib:AddToRegistry(NotifyInner, {
-        BackgroundColor3 = 'MainColor';
-        BorderColor3 = 'OutlineColor';
-    }, true);
+    QuorumLib:AddToRegistry(NotifyInner, { BackgroundColor3 = 'MainColor'; BorderColor3 = 'OutlineColor'; }, true);
 
     local InnerFrame = QuorumLib:Create('Frame', {
         BackgroundColor3 = Color3.new(1, 1, 1);
@@ -2914,9 +2614,7 @@ function QuorumLib:Notify(Text, Time)
         Parent = NotifyOuter;
     });
 
-    QuorumLib:AddToRegistry(LeftColor, {
-        BackgroundColor3 = 'AccentColor';
-    }, true);
+    QuorumLib:AddToRegistry(LeftColor, { BackgroundColor3 = 'AccentColor'; }, true);
 
     pcall(NotifyOuter.TweenSize, NotifyOuter, UDim2.new(0, XSize + 8 + 4, 0, YSize), 'Out', 'Quad', 0.4, true);
 
@@ -2945,17 +2643,24 @@ function QuorumLib:CreateWindow(...)
     if Config.UseCustomCursor == nil then Config.UseCustomCursor = true end
     QuorumLib.UseCustomCursor = Config.UseCustomCursor and true or false
 
+    -- Поддержка Config.Size
+    local BaseSize = UDim2.fromOffset(550, 600)
+    if Config.Size == "Small" then
+        BaseSize = UDim2.fromOffset(450, 480)
+    elseif Config.Size == "Big" then
+        BaseSize = UDim2.fromOffset(700, 700)
+    elseif typeof(Config.Size) == "UDim2" then
+        BaseSize = Config.Size
+    end
+
     if typeof(Config.Position) ~= 'UDim2' then Config.Position = UDim2.fromOffset(175, 50) end
-    if typeof(Config.Size) ~= 'UDim2' then Config.Size = UDim2.fromOffset(550, 600) end
 
     if IsMobile then
-        if Config.Size == UDim2.fromOffset(550, 600) then
+        if BaseSize == UDim2.fromOffset(550, 600) or Config.Size == nil then
             local VP = workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize or Vector2.new(1024, 768)
-            Config.Size = UDim2.fromOffset(math.min(420, VP.X - 40), math.min(360, VP.Y - 80))
+            BaseSize = UDim2.fromOffset(math.min(420, VP.X - 40), math.min(360, VP.Y - 80))
         end
-        if not Config.Center then
-            Config.Center = true
-        end
+        if not Config.Center then Config.Center = true end
     end
 
     if Config.Center then
@@ -2963,16 +2668,14 @@ function QuorumLib:CreateWindow(...)
         Config.Position = UDim2.fromScale(0.5, 0.5)
     end
 
-    local Window = {
-        Tabs = {};
-    };
+    local Window = { Tabs = {}; };
 
     local Outer = QuorumLib:Create('Frame', {
         AnchorPoint = Config.AnchorPoint,
         BackgroundColor3 = Color3.new(0, 0, 0);
         BorderSizePixel = 0;
         Position = Config.Position,
-        Size = Config.Size,
+        Size = BaseSize,
         Visible = false;
         ZIndex = 1;
         Parent = ScreenGui;
@@ -2990,10 +2693,7 @@ function QuorumLib:CreateWindow(...)
         Parent = Outer;
     });
 
-    QuorumLib:AddToRegistry(Inner, {
-        BackgroundColor3 = 'MainColor';
-        BorderColor3 = 'AccentColor';
-    });
+    QuorumLib:AddToRegistry(Inner, { BackgroundColor3 = 'MainColor'; BorderColor3 = 'AccentColor'; });
 
     local WindowLabel = QuorumLib:CreateLabel({
         Position = UDim2.new(0, 7, 0, 0);
@@ -3013,10 +2713,7 @@ function QuorumLib:CreateWindow(...)
         Parent = Inner;
     });
 
-    QuorumLib:AddToRegistry(MainSectionOuter, {
-        BackgroundColor3 = 'BackgroundColor';
-        BorderColor3 = 'OutlineColor';
-    });
+    QuorumLib:AddToRegistry(MainSectionOuter, { BackgroundColor3 = 'BackgroundColor'; BorderColor3 = 'OutlineColor'; });
 
     local MainSectionInner = QuorumLib:Create('Frame', {
         BackgroundColor3 = QuorumLib.BackgroundColor;
@@ -3028,9 +2725,7 @@ function QuorumLib:CreateWindow(...)
         Parent = MainSectionOuter;
     });
 
-    QuorumLib:AddToRegistry(MainSectionInner, {
-        BackgroundColor3 = 'BackgroundColor';
-    });
+    QuorumLib:AddToRegistry(MainSectionInner, { BackgroundColor3 = 'BackgroundColor'; });
 
     local TabArea = QuorumLib:Create('ScrollingFrame', {
         BackgroundTransparency = 1;
@@ -3046,9 +2741,7 @@ function QuorumLib:CreateWindow(...)
         Parent = MainSectionInner;
     });
 
-    QuorumLib:AddToRegistry(TabArea, {
-        ScrollBarImageColor3 = 'AccentColor';
-    });
+    QuorumLib:AddToRegistry(TabArea, { ScrollBarImageColor3 = 'AccentColor'; });
 
     local TabListLayout = QuorumLib:Create('UIListLayout', {
         Padding = UDim.new(0, Config.TabPadding);
@@ -3073,15 +2766,38 @@ function QuorumLib:CreateWindow(...)
         Parent = MainSectionInner;
     });
 
-
-    QuorumLib:AddToRegistry(TabContainer, {
-        BackgroundColor3 = 'MainColor';
-        BorderColor3 = 'OutlineColor';
-    });
+    QuorumLib:AddToRegistry(TabContainer, { BackgroundColor3 = 'MainColor'; BorderColor3 = 'OutlineColor'; });
 
     function Window:SetWindowTitle(Title)
         WindowLabel.Text = Title;
     end;
+
+    -- Функция изменения размера
+    function Window:SetSize(NewSize)
+        if NewSize == "Small" then NewSize = UDim2.fromOffset(450, 480)
+        elseif NewSize == "Big" then NewSize = UDim2.fromOffset(700, 700)
+        elseif NewSize == "Default" then NewSize = UDim2.fromOffset(550, 600)
+        elseif typeof(NewSize) == "number" then NewSize = UDim2.fromOffset(NewSize, NewSize * 1.1) 
+        elseif typeof(NewSize) ~= "UDim2" then return end
+
+        if not Config.Center then
+            local currentAbs = Outer.AbsolutePosition
+            local currentSize = Outer.AbsoluteSize
+            local centerX = currentAbs.X + (currentSize.X / 2)
+            local centerY = currentAbs.Y + (currentSize.Y / 2)
+            local newX = centerX - (NewSize.X.Offset / 2)
+            local newY = centerY - (NewSize.Y.Offset / 2)
+            
+            TweenService:Create(Outer, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
+                Size = NewSize,
+                Position = UDim2.fromOffset(newX, newY)
+            }):Play()
+        else
+            TweenService:Create(Outer, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
+                Size = NewSize
+            }):Play()
+        end
+    end
 
     function Window:AddTab(Name)
         local Tab = {
@@ -3099,10 +2815,7 @@ function QuorumLib:CreateWindow(...)
             Parent = TabArea;
         });
 
-        QuorumLib:AddToRegistry(TabButton, {
-            BackgroundColor3 = 'BackgroundColor';
-            BorderColor3 = 'OutlineColor';
-        });
+        QuorumLib:AddToRegistry(TabButton, { BackgroundColor3 = 'BackgroundColor'; BorderColor3 = 'OutlineColor'; });
 
         local TabButtonLabel = QuorumLib:CreateLabel({
             Position = UDim2.new(0, 0, 0, 0);
@@ -3122,9 +2835,7 @@ function QuorumLib:CreateWindow(...)
             Parent = TabButton;
         });
 
-        QuorumLib:AddToRegistry(Blocker, {
-            BackgroundColor3 = 'MainColor';
-        });
+        QuorumLib:AddToRegistry(Blocker, { BackgroundColor3 = 'MainColor'; });
 
         local TabFrame = QuorumLib:Create('Frame', {
             Name = 'TabFrame',
@@ -3188,7 +2899,6 @@ function QuorumLib:CreateWindow(...)
             for _, Tab in next, Window.Tabs do
                 Tab:HideTab();
             end;
-
             Blocker.BackgroundTransparency = 0;
             TabButton.BackgroundColor3 = QuorumLib.MainColor;
             QuorumLib.RegistryMap[TabButton].Properties.BackgroundColor3 = 'MainColor';
@@ -3209,7 +2919,6 @@ function QuorumLib:CreateWindow(...)
 
         function Tab:AddGroupbox(Info)
             local Groupbox = {};
-
             local BoxOuter = QuorumLib:Create('Frame', {
                 BackgroundColor3 = QuorumLib.BackgroundColor;
                 BorderColor3 = QuorumLib.OutlineColor;
@@ -3219,10 +2928,7 @@ function QuorumLib:CreateWindow(...)
                 Parent = Info.Side == 1 and LeftSide or RightSide;
             });
 
-            QuorumLib:AddToRegistry(BoxOuter, {
-                BackgroundColor3 = 'BackgroundColor';
-                BorderColor3 = 'OutlineColor';
-            });
+            QuorumLib:AddToRegistry(BoxOuter, { BackgroundColor3 = 'BackgroundColor'; BorderColor3 = 'OutlineColor'; });
 
             local BoxInner = QuorumLib:Create('Frame', {
                 BackgroundColor3 = QuorumLib.BackgroundColor;
@@ -3233,9 +2939,7 @@ function QuorumLib:CreateWindow(...)
                 Parent = BoxOuter;
             });
 
-            QuorumLib:AddToRegistry(BoxInner, {
-                BackgroundColor3 = 'BackgroundColor';
-            });
+            QuorumLib:AddToRegistry(BoxInner, { BackgroundColor3 = 'BackgroundColor'; });
 
             local Highlight = QuorumLib:Create('Frame', {
                 BackgroundColor3 = QuorumLib.AccentColor;
@@ -3245,9 +2949,7 @@ function QuorumLib:CreateWindow(...)
                 Parent = BoxInner;
             });
 
-            QuorumLib:AddToRegistry(Highlight, {
-                BackgroundColor3 = 'AccentColor';
-            });
+            QuorumLib:AddToRegistry(Highlight, { BackgroundColor3 = 'AccentColor'; });
 
             local GroupboxLabel = QuorumLib:CreateLabel({
                 Size = UDim2.new(1, 0, 0, 18);
@@ -3275,40 +2977,27 @@ function QuorumLib:CreateWindow(...)
 
             function Groupbox:Resize()
                 local Size = 0;
-
                 for _, Element in next, Groupbox.Container:GetChildren() do
                     if (not Element:IsA('UIListLayout')) and Element.Visible then
                         Size = Size + Element.Size.Y.Offset;
                     end;
                 end;
-
                 BoxOuter.Size = UDim2.new(1, 0, 0, 20 + Size + 2 + 2);
             end;
 
             Groupbox.Container = Container;
             setmetatable(Groupbox, BaseGroupbox);
-
             Groupbox:AddBlank(3);
             Groupbox:Resize();
-
             Tab.Groupboxes[Info.Name] = Groupbox;
-
             return Groupbox;
         end;
 
-        function Tab:AddLeftGroupbox(Name)
-            return Tab:AddGroupbox({ Side = 1; Name = Name; });
-        end;
-
-        function Tab:AddRightGroupbox(Name)
-            return Tab:AddGroupbox({ Side = 2; Name = Name; });
-        end;
+        function Tab:AddLeftGroupbox(Name) return Tab:AddGroupbox({ Side = 1; Name = Name; }); end;
+        function Tab:AddRightGroupbox(Name) return Tab:AddGroupbox({ Side = 2; Name = Name; }); end;
 
         function Tab:AddTabbox(Info)
-            local Tabbox = {
-                Tabs = {};
-            };
-
+            local Tabbox = { Tabs = {}; };
             local BoxOuter = QuorumLib:Create('Frame', {
                 BackgroundColor3 = QuorumLib.BackgroundColor;
                 BorderColor3 = QuorumLib.OutlineColor;
@@ -3318,10 +3007,7 @@ function QuorumLib:CreateWindow(...)
                 Parent = Info.Side == 1 and LeftSide or RightSide;
             });
 
-            QuorumLib:AddToRegistry(BoxOuter, {
-                BackgroundColor3 = 'BackgroundColor';
-                BorderColor3 = 'OutlineColor';
-            });
+            QuorumLib:AddToRegistry(BoxOuter, { BackgroundColor3 = 'BackgroundColor'; BorderColor3 = 'OutlineColor'; });
 
             local BoxInner = QuorumLib:Create('Frame', {
                 BackgroundColor3 = QuorumLib.BackgroundColor;
@@ -3332,9 +3018,7 @@ function QuorumLib:CreateWindow(...)
                 Parent = BoxOuter;
             });
 
-            QuorumLib:AddToRegistry(BoxInner, {
-                BackgroundColor3 = 'BackgroundColor';
-            });
+            QuorumLib:AddToRegistry(BoxInner, { BackgroundColor3 = 'BackgroundColor'; });
 
             local Highlight = QuorumLib:Create('Frame', {
                 BackgroundColor3 = QuorumLib.AccentColor;
@@ -3344,9 +3028,7 @@ function QuorumLib:CreateWindow(...)
                 Parent = BoxInner;
             });
 
-            QuorumLib:AddToRegistry(Highlight, {
-                BackgroundColor3 = 'AccentColor';
-            });
+            QuorumLib:AddToRegistry(Highlight, { BackgroundColor3 = 'AccentColor'; });
 
             local TabboxButtons = QuorumLib:Create('Frame', {
                 BackgroundTransparency = 1;
@@ -3365,7 +3047,6 @@ function QuorumLib:CreateWindow(...)
 
             function Tabbox:AddTab(Name)
                 local Tab = {};
-
                 local Button = QuorumLib:Create('Frame', {
                     BackgroundColor3 = QuorumLib.MainColor;
                     BorderColor3 = Color3.new(0, 0, 0);
@@ -3374,9 +3055,7 @@ function QuorumLib:CreateWindow(...)
                     Parent = TabboxButtons;
                 });
 
-                QuorumLib:AddToRegistry(Button, {
-                    BackgroundColor3 = 'MainColor';
-                });
+                QuorumLib:AddToRegistry(Button, { BackgroundColor3 = 'MainColor'; });
 
                 local ButtonLabel = QuorumLib:CreateLabel({
                     Size = UDim2.new(1, 0, 1, 0);
@@ -3397,9 +3076,7 @@ function QuorumLib:CreateWindow(...)
                     Parent = Button;
                 });
 
-                QuorumLib:AddToRegistry(Block, {
-                    BackgroundColor3 = 'BackgroundColor';
-                });
+                QuorumLib:AddToRegistry(Block, { BackgroundColor3 = 'BackgroundColor'; });
 
                 local Container = QuorumLib:Create('Frame', {
                     BackgroundTransparency = 1;
@@ -3417,52 +3094,38 @@ function QuorumLib:CreateWindow(...)
                 });
 
                 function Tab:Show()
-                    for _, Tab in next, Tabbox.Tabs do
-                        Tab:Hide();
-                    end;
-
+                    for _, Tab in next, Tabbox.Tabs do Tab:Hide(); end;
                     Container.Visible = true;
                     Block.Visible = true;
-
                     Button.BackgroundColor3 = QuorumLib.BackgroundColor;
                     QuorumLib.RegistryMap[Button].Properties.BackgroundColor3 = 'BackgroundColor';
-
                     Tab:Resize();
                 end;
 
                 function Tab:Hide()
                     Container.Visible = false;
                     Block.Visible = false;
-
                     Button.BackgroundColor3 = QuorumLib.MainColor;
                     QuorumLib.RegistryMap[Button].Properties.BackgroundColor3 = 'MainColor';
                 end;
 
                 function Tab:Resize()
                     local TabCount = 0;
-
-                    for _, Tab in next, Tabbox.Tabs do
-                        TabCount = TabCount + 1;
-                    end;
-
+                    for _, Tab in next, Tabbox.Tabs do TabCount = TabCount + 1; end;
                     for _, Button in next, TabboxButtons:GetChildren() do
                         if not Button:IsA('UIListLayout') then
                             Button.Size = UDim2.new(1 / TabCount, 0, 1, 0);
                         end;
-                    end;
+                    end
 
-                    if (not Container.Visible) then
-                        return;
-                    end;
+                    if (not Container.Visible) then return; end;
 
                     local Size = 0;
-
                     for _, Element in next, Tab.Container:GetChildren() do
                         if (not Element:IsA('UIListLayout')) and Element.Visible then
                             Size = Size + Element.Size.Y.Offset;
                         end;
-                    end;
-
+                    end
                     BoxOuter.Size = UDim2.new(1, 0, 0, 20 + Size + 2 + 2);
                 end;
 
@@ -3475,42 +3138,26 @@ function QuorumLib:CreateWindow(...)
 
                 Tab.Container = Container;
                 Tabbox.Tabs[Name] = Tab;
-
                 setmetatable(Tab, BaseGroupbox);
-
                 Tab:AddBlank(3);
                 Tab:Resize();
 
-                if #TabboxButtons:GetChildren() == 2 then
-                    Tab:Show();
-                end;
-
+                if #TabboxButtons:GetChildren() == 2 then Tab:Show(); end;
                 return Tab;
             end;
 
             Tab.Tabboxes[Info.Name or ''] = Tabbox;
-
             return Tabbox;
         end;
 
-        function Tab:AddLeftTabbox(Name)
-            return Tab:AddTabbox({ Name = Name, Side = 1; });
-        end;
-
-        function Tab:AddRightTabbox(Name)
-            return Tab:AddTabbox({ Name = Name, Side = 2; });
-        end;
+        function Tab:AddLeftTabbox(Name) return Tab:AddTabbox({ Name = Name, Side = 1; }); end;
+        function Tab:AddRightTabbox(Name) return Tab:AddTabbox({ Name = Name, Side = 2; }); end;
 
         TabButton.InputBegan:Connect(function(Input)
-            if IsPrimaryPress(Input) then
-                Tab:ShowTab();
-            end
+            if IsPrimaryPress(Input) then Tab:ShowTab(); end;
         end);
 
-        if #TabContainer:GetChildren() == 1 then
-            Tab:ShowTab();
-        end;
-
+        if #TabContainer:GetChildren() == 1 then Tab:ShowTab(); end;
         Window.Tabs[Name] = Tab;
         return Tab;
     end;
@@ -3528,9 +3175,7 @@ function QuorumLib:CreateWindow(...)
     local Fading = false;
 
     function QuorumLib:Toggle()
-        if Fading then
-            return;
-        end;
+        if Fading then return; end;
 
         local FadeTime = Config.MenuFadeTime;
         Fading = true;
@@ -3539,15 +3184,16 @@ function QuorumLib:CreateWindow(...)
 
         if QuorumLib.MenuToggled then
             Outer.Visible = true;
-            -- Вызов спавна курсора при открытии
-            if QuorumLib.UseCustomCursor then
-                SpawnCustomCursor()
+            if QuorumLib.UseCustomCursor then SpawnCustomCursor() end;
+        else
+            -- Возвращаем MouseBehavior когда меню закрывается
+            if not IsTouchDevice then
+                InputService.MouseBehavior = Enum.MouseBehavior.Default
             end
         end;
 
         for _, Desc in next, Outer:GetDescendants() do
             local Properties = {};
-
             if Desc:IsA('ImageLabel') then
                 table.insert(Properties, 'ImageTransparency');
                 table.insert(Properties, 'BackgroundTransparency');
@@ -3560,29 +3206,20 @@ function QuorumLib:CreateWindow(...)
             end;
 
             local Cache = TransparencyCache[Desc];
-
             if (not Cache) then
                 Cache = {};
                 TransparencyCache[Desc] = Cache;
             end;
 
             for _, Prop in next, Properties do
-                if not Cache[Prop] then
-                    Cache[Prop] = Desc[Prop];
-                end;
-
-                if Cache[Prop] == 1 then
-                    continue;
-                end;
-
+                if not Cache[Prop] then Cache[Prop] = Desc[Prop]; end;
+                if Cache[Prop] == 1 then continue; end;
                 TweenService:Create(Desc, TweenInfo.new(FadeTime, Enum.EasingStyle.Linear), { [Prop] = QuorumLib.MenuToggled and Cache[Prop] or 1 }):Play();
             end;
         end;
 
         task.wait(FadeTime);
-
         Outer.Visible = QuorumLib.MenuToggled;
-
         Fading = false;
     end
 
@@ -3613,29 +3250,18 @@ function QuorumLib:CreateWindow(...)
             Parent = ScreenGui;
         });
 
-        QuorumLib:AddToRegistry(MobileBtn, {
-            BackgroundColor3 = 'MainColor';
-            BorderColor3 = 'AccentColor';
-            TextColor3 = 'FontColor';
-        }, true);
-
-        MobileBtn.MouseButton1Click:Connect(function()
-            task.spawn(QuorumLib.Toggle)
-        end);
-
+        QuorumLib:AddToRegistry(MobileBtn, { BackgroundColor3 = 'MainColor'; BorderColor3 = 'AccentColor'; TextColor3 = 'FontColor'; }, true);
+        MobileBtn.MouseButton1Click:Connect(function() task.spawn(QuorumLib.Toggle) end);
         QuorumLib.MobileToggle = MobileBtn;
     end
 
     if Config.AutoShow then task.spawn(QuorumLib.Toggle) end
-
     Window.Holder = Outer;
-
     return Window;
 end;
 
 local function OnPlayerChange()
     local PlayerList = GetPlayersString();
-
     for _, Value in next, Options do
         if Value.Type == 'Dropdown' and Value.SpecialType == 'Player' then
             Value:SetValues(PlayerList);
