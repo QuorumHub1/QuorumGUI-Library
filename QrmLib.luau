@@ -2406,11 +2406,12 @@ end;
 
 -- < Create other UI elements >
 do
-    local function CreateNotificationArea(Position, Size, LayoutOrder)
+    local function CreateNotificationArea(Position, Size, AnchorPoint, LayoutOrder)
         local Area = QuorumLib:Create('Frame', {
             BackgroundTransparency = 1;
             Position = Position;
             Size = Size;
+            AnchorPoint = AnchorPoint;
             ZIndex = 100;
             Parent = ScreenGui;
         });
@@ -2429,10 +2430,10 @@ do
         return Area;
     end
 
-    QuorumLib.NotificationAreas.TopLeft = CreateNotificationArea(UDim2.new(0, 10, 0, 45), UDim2.new(0, 300, 0, 200))
-    QuorumLib.NotificationAreas.TopRight = CreateNotificationArea(UDim2.new(1, -310, 0, 45), UDim2.new(0, 300, 0, 200))
-    QuorumLib.NotificationAreas.BottomLeft = CreateNotificationArea(UDim2.new(0, 10, 1, -200), UDim2.new(0, 300, 0, 200), 'BottomLeft')
-    QuorumLib.NotificationAreas.BottomRight = CreateNotificationArea(UDim2.new(1, -310, 1, -200), UDim2.new(0, 300, 0, 200), 'BottomRight')
+    QuorumLib.NotificationAreas.TopLeft = CreateNotificationArea(UDim2.new(0, 10, 0, 60), UDim2.new(0, 300, 0, 200), Vector2.new(0, 0))
+    QuorumLib.NotificationAreas.TopRight = CreateNotificationArea(UDim2.new(1, -10, 0, 60), UDim2.new(0, 300, 0, 200), Vector2.new(1, 0))
+    QuorumLib.NotificationAreas.BottomLeft = CreateNotificationArea(UDim2.new(0, 10, 1, -10), UDim2.new(0, 300, 0, 200), Vector2.new(0, 1), 'BottomLeft')
+    QuorumLib.NotificationAreas.BottomRight = CreateNotificationArea(UDim2.new(1, -10, 1, -10), UDim2.new(0, 300, 0, 200), Vector2.new(1, 1), 'BottomRight')
     
     QuorumLib.NotificationArea = QuorumLib.NotificationAreas.TopLeft
 
@@ -2578,12 +2579,11 @@ function QuorumLib:Notify(Text, Time, Position)
     local TargetArea = QuorumLib.NotificationAreas[Position or 'TopLeft'] or QuorumLib.NotificationAreas.TopLeft
     
     local isRight = (Position == 'TopRight' or Position == 'BottomRight')
-    local anchor = isRight and Vector2.new(1, 0) or Vector2.new(0, 0)
     
     local NotifyOuter = QuorumLib:Create('Frame', {
         BorderColor3 = Color3.new(0, 0, 0);
-        AnchorPoint = anchor;
-        Position = isRight and UDim2.new(1, 0, 0, 0) or UDim2.new(0, 0, 0, 0);
+        AnchorPoint = isRight and Vector2.new(1, 0) or Vector2.new(0, 0);
+        Position = UDim2.new(0, 0, 0, 0);
         Size = UDim2.new(0, 0, 0, YSize);
         ClipsDescendants = true;
         ZIndex = 100;
