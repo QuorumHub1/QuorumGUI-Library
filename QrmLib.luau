@@ -3031,8 +3031,11 @@ function QuorumLib:CreateWindow(...)
                 ZIndex = 1;
                 Parent = Inner;
             });
-            BuildRow(titleSegments, TitleRow, 5, 1, 16)
-            TitleRow.Size = UDim2.new(0, TitleRow.UIListLayout.AbsoluteContentSize.X, 0, 25)
+            local tr, _ = BuildRow(titleSegments, TitleRow, 5, 1, 16)
+            local trLayout = tr:FindFirstChildOfClass('UIListLayout')
+            if trLayout then
+                tr.Size = UDim2.new(0, trLayout.AbsoluteContentSize.X, 0, 25)
+            end
         end
     end
 
@@ -3117,8 +3120,11 @@ function QuorumLib:CreateWindow(...)
                 ZIndex = 1;
                 Parent = Inner;
             });
-            BuildRow(titleSegments, TitleRow, 5, 1, 16)
-            TitleRow.Size = UDim2.new(0, TitleRow.UIListLayout.AbsoluteContentSize.X, 0, 25)
+            local tr, _ = BuildRow(titleSegments, TitleRow, 5, 1, 16)
+            local trLayout = tr:FindFirstChildOfClass('UIListLayout')
+            if trLayout then
+                tr.Size = UDim2.new(0, trLayout.AbsoluteContentSize.X, 0, 25)
+            end
         else
             WindowLabel.Visible = true
         end
