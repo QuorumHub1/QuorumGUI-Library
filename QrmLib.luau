@@ -1378,22 +1378,45 @@ do
     end;
 
     function Funcs:AddLabel(Text, DoesWrap)
+        local IconName, CleanText = QuorumLib:ParseIcon(Text)
         local Label = {};
         local Groupbox = self;
         local Container = Groupbox.Container;
         local TextLabel = QuorumLib:CreateLabel({
-            Size = UDim2.new(1, -4, 0, 15);
+            Size = UDim2.new(1, IconName and -24 or -4, 0, 15);
+            Position = UDim2.new(0, IconName and 24 or 0, 0, 0);
             TextSize = 14;
-            Text = Text;
+            Text = CleanText;
             TextWrapped = DoesWrap or false,
             TextXAlignment = Enum.TextXAlignment.Left;
             ZIndex = 5;
             Parent = Container;
         });
 
+        if IconName then
+            local iconImage = QuorumLib:Create('ImageLabel', {
+                BackgroundTransparency = 1;
+                Position = UDim2.new(0, 4, 0, 2);
+                Size = UDim2.new(0, 14, 0, 14);
+                Image = QuorumLib.IconAssetCache[IconName] or "",
+                ImageColor3 = QuorumLib.FontColor,
+                ZIndex = 5;
+                Parent = Container;
+            });
+            if not QuorumLib.IconAssetCache[IconName] then
+                task.spawn(function()
+                    while not QuorumLib.IconAssetCache[IconName] do
+                        FetchIcon(IconName)
+                        task.wait(0.1)
+                    end
+                    iconImage.Image = QuorumLib.IconAssetCache[IconName]
+                end)
+            end
+        end
+
         if DoesWrap then
-            local Y = select(2, QuorumLib:GetTextBounds(Text, QuorumLib.Font, 14, Vector2.new(TextLabel.AbsoluteSize.X, math.huge)))
-            TextLabel.Size = UDim2.new(1, -4, 0, Y)
+            local Y = select(2, QuorumLib:GetTextBounds(CleanText, QuorumLib.Font, 14, Vector2.new(TextLabel.AbsoluteSize.X, math.huge)))
+            TextLabel.Size = UDim2.new(1, IconName and -24 or -4, 0, Y)
         else
             QuorumLib:Create('UIListLayout', {
                 Padding = UDim.new(0, 4);
@@ -1407,11 +1430,12 @@ do
         Label.TextLabel = TextLabel;
         Label.Container = Container;
 
-        function Label:SetText(Text)
-            TextLabel.Text = Text
+        function Label:SetText(NewText)
+            local NewIcon, NewClean = QuorumLib:ParseIcon(NewText)
+            TextLabel.Text = NewClean
             if DoesWrap then
-                local Y = select(2, QuorumLib:GetTextBounds(Text, QuorumLib.Font, 14, Vector2.new(TextLabel.AbsoluteSize.X, math.huge)))
-                TextLabel.Size = UDim2.new(1, -4, 0, Y)
+                local Y = select(2, QuorumLib:GetTextBounds(NewClean, QuorumLib.Font, 14, Vector2.new(TextLabel.AbsoluteSize.X, math.huge)))
+                TextLabel.Size = UDim2.new(1, NewIcon and -24 or -4, 0, Y)
             end
             Groupbox:Resize();
         end;
@@ -1443,6 +1467,7 @@ do
         local Container = Groupbox.Container;
 
         local function CreateBaseButton(Button)
+            local IconName, CleanText = QuorumLib:ParseIcon(Button.Text)
             local Outer = QuorumLib:Create('Frame', {
                 BackgroundColor3 = Color3.new(0, 0, 0);
                 BorderColor3 = Color3.new(0, 0, 0);
@@ -1460,12 +1485,35 @@ do
             });
 
             local Label = QuorumLib:CreateLabel({
-                Size = UDim2.new(1, 0, 1, 0);
+                Size = UDim2.new(1, IconName and -24 or 0, 1, 0);
+                Position = UDim2.new(0, IconName and 24 or 0, 0, 0);
                 TextSize = 14;
-                Text = Button.Text;
+                Text = CleanText;
                 ZIndex = 6;
                 Parent = Inner;
             });
+
+            if IconName then
+                local iconImage = QuorumLib:Create('ImageLabel', {
+                    BackgroundTransparency = 1;
+                    Position = UDim2.new(0, 6, 0.5, 0);
+                    Size = UDim2.new(0, 14, 0, 14);
+                    AnchorPoint = Vector2.new(0, 0.5);
+                    Image = QuorumLib.IconAssetCache[IconName] or "",
+                    ImageColor3 = QuorumLib.FontColor,
+                    ZIndex = 7;
+                    Parent = Inner;
+                });
+                if not QuorumLib.IconAssetCache[IconName] then
+                    task.spawn(function()
+                        while not QuorumLib.IconAssetCache[IconName] do
+                            FetchIcon(IconName)
+                            task.wait(0.1)
+                        end
+                        iconImage.Image = QuorumLib.IconAssetCache[IconName]
+                    end)
+                end
+            end
 
             QuorumLib:Create('UIGradient', {
                 Color = ColorSequence.new({
@@ -1524,7 +1572,8 @@ do
                     QuorumLib:RemoveFromRegistry(Button.Label)
                     QuorumLib:AddToRegistry(Button.Label, { TextColor3 = 'FontColor' })
                     Button.Label.TextColor3 = QuorumLib.FontColor
-                    Button.Label.Text = Button.Text
+                    local IconName, CleanText = QuorumLib:ParseIcon(Button.Text)
+                    Button.Label.Text = CleanText
                     task.defer(rawset, Button, 'Locked', false)
                     if clicked then QuorumLib:SafeCallback(Button.Func) end
                     return
@@ -1599,6 +1648,7 @@ do
 
     function Funcs:AddInput(Idx, Info)
         assert(Info.Text, 'AddInput: Missing `Text` string.')
+        local IconName, CleanText = QuorumLib:ParseIcon(Info.Text)
         local Textbox = {
             Value = Info.Default or '';
             Numeric = Info.Numeric or false;
@@ -1610,13 +1660,35 @@ do
         local Groupbox = self;
         local Container = Groupbox.Container;
         local InputLabel = QuorumLib:CreateLabel({
-            Size = UDim2.new(1, 0, 0, 15);
+            Size = UDim2.new(1, IconName and -24 or 0, 0, 15);
+            Position = UDim2.new(0, IconName and 24 or 0, 0, 0);
             TextSize = 14;
-            Text = Info.Text;
+            Text = CleanText;
             TextXAlignment = Enum.TextXAlignment.Left;
             ZIndex = 5;
             Parent = Container;
         });
+
+        if IconName then
+            local iconImage = QuorumLib:Create('ImageLabel', {
+                BackgroundTransparency = 1;
+                Position = UDim2.new(0, 4, 0, 2);
+                Size = UDim2.new(0, 14, 0, 14);
+                Image = QuorumLib.IconAssetCache[IconName] or "",
+                ImageColor3 = QuorumLib.FontColor,
+                ZIndex = 5;
+                Parent = Container;
+            });
+            if not QuorumLib.IconAssetCache[IconName] then
+                task.spawn(function()
+                    while not QuorumLib.IconAssetCache[IconName] do
+                        FetchIcon(IconName)
+                        task.wait(0.1)
+                    end
+                    iconImage.Image = QuorumLib.IconAssetCache[IconName]
+                end)
+            end
+        end
 
         Groupbox:AddBlank(1);
         local TextBoxOuter = QuorumLib:Create('Frame', {
@@ -1741,6 +1813,7 @@ do
 
     function Funcs:AddToggle(Idx, Info)
         assert(Info.Text, 'AddInput: Missing `Text` string.')
+        local IconName, CleanText = QuorumLib:ParseIcon(Info.Text)
         local Toggle = {
             Value = Info.Default or false;
             Type = 'Toggle';
@@ -1781,14 +1854,36 @@ do
         QuorumLib:AddToRegistry(ToggleInner, { BackgroundColor3 = 'MainColor'; BorderColor3 = 'OutlineColor'; });
 
         local ToggleLabel = QuorumLib:CreateLabel({
-            Size = UDim2.new(1, -20, 1, 0);
-            Position = UDim2.new(0, 20, 0, 0);
+            Size = UDim2.new(1, IconName and -44 or -20, 1, 0);
+            Position = UDim2.new(0, IconName and 44 or 20, 0, 0);
             TextSize = 14;
-            Text = Info.Text;
+            Text = CleanText;
             TextXAlignment = Enum.TextXAlignment.Left;
             ZIndex = 6;
             Parent = ToggleContainer;
         });
+
+        if IconName then
+            local iconImage = QuorumLib:Create('ImageLabel', {
+                BackgroundTransparency = 1;
+                Position = UDim2.new(0, 22, 0.5, 0);
+                Size = UDim2.new(0, 14, 0, 14);
+                AnchorPoint = Vector2.new(0, 0.5);
+                Image = QuorumLib.IconAssetCache[IconName] or "",
+                ImageColor3 = QuorumLib.FontColor,
+                ZIndex = 6;
+                Parent = ToggleContainer;
+            });
+            if not QuorumLib.IconAssetCache[IconName] then
+                task.spawn(function()
+                    while not QuorumLib.IconAssetCache[IconName] do
+                        FetchIcon(IconName)
+                        task.wait(0.1)
+                    end
+                    iconImage.Image = QuorumLib.IconAssetCache[IconName]
+                end)
+            end
+        end
 
         local ToggleRegion = QuorumLib:Create('Frame', {
             BackgroundTransparency = 1;
@@ -1863,6 +1958,7 @@ do
         assert(Info.Max, 'AddSlider: Missing maximum value.');
         assert(Info.Rounding, 'AddSlider: Missing rounding value.');
 
+        local IconName, CleanText = QuorumLib:ParseIcon(Info.Text)
         local Slider = {
             Value = Info.Default;
             Min = Info.Min;
@@ -1878,14 +1974,35 @@ do
 
         if not Info.Compact then
             QuorumLib:CreateLabel({
-                Size = UDim2.new(1, 0, 0, 10);
+                Size = UDim2.new(1, IconName and -24 or 0, 0, 10);
+                Position = UDim2.new(0, IconName and 24 or 0, 0, 0);
                 TextSize = 14;
-                Text = Info.Text;
+                Text = CleanText;
                 TextXAlignment = Enum.TextXAlignment.Left;
                 TextYAlignment = Enum.TextYAlignment.Bottom;
                 ZIndex = 5;
                 Parent = Container;
             });
+            if IconName then
+                local iconImage = QuorumLib:Create('ImageLabel', {
+                    BackgroundTransparency = 1;
+                    Position = UDim2.new(0, 4, 0, 0);
+                    Size = UDim2.new(0, 14, 0, 14);
+                    Image = QuorumLib.IconAssetCache[IconName] or "",
+                    ImageColor3 = QuorumLib.FontColor,
+                    ZIndex = 5;
+                    Parent = Container;
+                });
+                if not QuorumLib.IconAssetCache[IconName] then
+                    task.spawn(function()
+                        while not QuorumLib.IconAssetCache[IconName] do
+                            FetchIcon(IconName)
+                            task.wait(0.1)
+                        end
+                        iconImage.Image = QuorumLib.IconAssetCache[IconName]
+                    end)
+                end
+            end
             Groupbox:AddBlank(3);
         end
 
@@ -1950,7 +2067,7 @@ do
         function Slider:Display()
             local Suffix = Info.Suffix or '';
             if Info.Compact then
-                DisplayLabel.Text = Info.Text .. ': ' .. Slider.Value .. Suffix
+                DisplayLabel.Text = CleanText .. ': ' .. Slider.Value .. Suffix
             elseif Info.HideMax then
                 DisplayLabel.Text = string.format('%s', Slider.Value .. Suffix)
             else
@@ -2029,6 +2146,7 @@ do
 
         if (not Info.Text) then Info.Compact = true; end;
 
+        local IconName, CleanText = QuorumLib:ParseIcon(Info.Text or '')
         local Dropdown = {
             Values = Info.Values;
             Value = Info.Multi and {};
@@ -2044,14 +2162,35 @@ do
 
         if not Info.Compact then
             local DropdownLabel = QuorumLib:CreateLabel({
-                Size = UDim2.new(1, 0, 0, 10);
+                Size = UDim2.new(1, IconName and -24 or 0, 0, 10);
+                Position = UDim2.new(0, IconName and 24 or 0, 0, 0);
                 TextSize = 14;
-                Text = Info.Text;
+                Text = CleanText;
                 TextXAlignment = Enum.TextXAlignment.Left;
                 TextYAlignment = Enum.TextYAlignment.Bottom;
                 ZIndex = 5;
                 Parent = Container;
             });
+            if IconName then
+                local iconImage = QuorumLib:Create('ImageLabel', {
+                    BackgroundTransparency = 1;
+                    Position = UDim2.new(0, 4, 0, 0);
+                    Size = UDim2.new(0, 14, 0, 14);
+                    Image = QuorumLib.IconAssetCache[IconName] or "",
+                    ImageColor3 = QuorumLib.FontColor,
+                    ZIndex = 5;
+                    Parent = Container;
+                });
+                if not QuorumLib.IconAssetCache[IconName] then
+                    task.spawn(function()
+                        while not QuorumLib.IconAssetCache[IconName] do
+                            FetchIcon(IconName)
+                            task.wait(0.1)
+                        end
+                        iconImage.Image = QuorumLib.IconAssetCache[IconName]
+                    end)
+                end
+            end
             Groupbox:AddBlank(3);
         end
 
