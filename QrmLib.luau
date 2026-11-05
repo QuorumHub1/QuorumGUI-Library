@@ -1,4 +1,3 @@
-warn"4"
 local _oldQrm = getgenv and getgenv().QuorumLib
 if _oldQrm and _oldQrm.Unload then
     pcall(function() _oldQrm:Unload() end)
@@ -21,21 +20,14 @@ local IsTouchDevice = InputService.TouchEnabled and not InputService.KeyboardEna
 local IsMobile = IsTouchDevice;
 
 local function GetInputPosition(Input)
-    if Input and Input.UserInputType == Enum.UserInputType.Touch then
+    if Input and (Input.UserInputType == Enum.UserInputType.Touch or Input.UserInputType == Enum.UserInputType.MouseMovement) then
         return Vector2.new(Input.Position.X, Input.Position.Y)
     end
-    local Loc = InputService:GetMouseLocation()
-    return Vector2.new(Loc.X, Loc.Y)
+    return Vector2.new(Mouse.X, Mouse.Y)
 end
 
 local function GetCursorPosition()
-    local Loc = InputService:GetMouseLocation()
-    return Vector2.new(Loc.X, Loc.Y)
-end
-
-local function GetGuiCursorPosition()
-    local Loc = InputService:GetMouseLocation()
-    return Vector2.new(Loc.X, Loc.Y + 36)
+    return Vector2.new(Mouse.X, Mouse.Y)
 end
 
 local function IsPrimaryPress(Input)
@@ -60,11 +52,6 @@ local function IsPrimaryHeld()
         return #InputService:GetMouseLocations() > 0
     end
     return InputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1)
-end
-
-local function LooksSynthetic(Input)
-    if not Input then return false end
-    return false
 end
 
 local ScreenGui = Instance.new('ScreenGui');
@@ -105,6 +92,7 @@ local QuorumLib = {
 
     UseCustomCursor = true;
     MobileToggle = nil;
+    KeybindFrame = nil;
 };
 
 local RainbowStep = 0
@@ -234,13 +222,7 @@ function QuorumLib:MakeDraggable(Instance, Cutoff)
             return
         end
 
-        local StartPos
-        if Input.UserInputType == Enum.UserInputType.Touch then
-            StartPos = Vector2.new(Input.Position.X, Input.Position.Y)
-        else
-            StartPos = Vector2.new(Mouse.X, Mouse.Y)
-        end
-
+        local StartPos = GetInputPosition(Input)
         local Relative = StartPos - Instance.AbsolutePosition
 
         if Relative.Y > (Cutoff or 40) then
@@ -262,13 +244,7 @@ function QuorumLib:MakeDraggable(Instance, Cutoff)
             return
         end
 
-        local Cur
-        if Input.UserInputType == Enum.UserInputType.Touch then
-            Cur = Vector2.new(Input.Position.X, Input.Position.Y)
-        else
-            Cur = Vector2.new(Mouse.X, Mouse.Y)
-        end
-
+        local Cur = GetInputPosition(Input)
         local Delta = Cur - DragStart
 
         Instance.Position = UDim2.new(
@@ -453,16 +429,6 @@ function QuorumLib:RemoveFromRegistry(Instance)
 end;
 
 function QuorumLib:UpdateColorsUsingRegistry()
-    -- TODO: Could have an 'active' list of objects
-    -- where the active list only contains Visible objects.
-
-    -- IMPL: Could setup .Changed events on the AddToRegistry function
-    -- that listens for the 'Visible' propert being changed.
-    -- Visible: true => Add to active list, and call UpdateColors function
-    -- Visible: false => Remove from active list.
-
-    -- The above would be especially efficient for a rainbow menu color or live color-changing.
-
     for Idx, Object in next, QuorumLib.Registry do
         for Property, ColorIdx in next, Object.Properties do
             if type(ColorIdx) == 'string' then
@@ -475,7 +441,6 @@ function QuorumLib:UpdateColorsUsingRegistry()
 end;
 
 function QuorumLib:GiveSignal(Signal)
-    -- Only used for signals not attached to library instances, as those should be cleaned up on object destruction by Roblox
     table.insert(QuorumLib.Signals, Signal)
 end
 
@@ -483,14 +448,18 @@ function QuorumLib:SetCustomCursor(Enabled)
     QuorumLib.UseCustomCursor = Enabled and true or false;
 end;
 
+function QuorumLib:SetKeybindVisibility(Bool)
+    if QuorumLib.KeybindFrame then
+        QuorumLib.KeybindFrame.Visible = Bool and true or false;
+    end
+end
+
 function QuorumLib:Unload()
-    -- Unload all of the signals
     for Idx = #QuorumLib.Signals, 1, -1 do
         local Connection = table.remove(QuorumLib.Signals, Idx)
         Connection:Disconnect()
     end
 
-     -- Call our unload callback, maybe to undo some hooks etc
     if QuorumLib.OnUnload then
         QuorumLib.OnUnload()
     end
@@ -524,7 +493,6 @@ do
 
     function Funcs:AddColorPicker(Idx, Info)
         local ToggleLabel = self.TextLabel;
-        -- local Container = self.Container;
 
         assert(Info.Default, 'AddColorPicker: Missing default value.');
 
@@ -555,7 +523,6 @@ do
             Parent = ToggleLabel;
         });
 
-        -- Transparency image taken from https://github.com/matas3535/SplixPrivateDrawingLibrary/blob/main/Library.lua cus i'm lazy
         local CheckerFrame = QuorumLib:Create('ImageLabel', {
             BorderSizePixel = 0;
             Size = UDim2.new(0, 27, 0, 13);
@@ -564,11 +531,6 @@ do
             Visible = not not Info.Transparency;
             Parent = DisplayFrame;
         });
-
-        -- 1/16/23
-        -- Rewrote this to be placed inside the Library ScreenGui
-        -- There was some issue which caused RelativeOffset to be way off
-        -- Thus the color picker would never show
 
         local PickerFrameOuter = QuorumLib:Create('Frame', {
             Name = 'Color';
@@ -1013,7 +975,7 @@ do
         SatVibMap.InputBegan:Connect(function(Input)
             if not IsPrimaryPress(Input) then return end
             while IsPrimaryHeld() do
-                local M = GetGuiCursorPosition()
+                local M = GetCursorPosition()
                 local MinX = SatVibMap.AbsolutePosition.X;
                 local MaxX = MinX + SatVibMap.AbsoluteSize.X;
                 local MouseX = math.clamp(M.X, MinX, MaxX);
@@ -1035,7 +997,7 @@ do
         HueSelectorInner.InputBegan:Connect(function(Input)
             if not IsPrimaryPress(Input) then return end
             while IsPrimaryHeld() do
-                local M = GetGuiCursorPosition()
+                local M = GetCursorPosition()
                 local MinY = HueSelectorInner.AbsolutePosition.Y;
                 local MaxY = MinY + HueSelectorInner.AbsoluteSize.Y;
                 local MouseY = math.clamp(M.Y, MinY, MaxY);
@@ -1067,7 +1029,7 @@ do
             TransparencyBoxInner.InputBegan:Connect(function(Input)
                 if not IsPrimaryPress(Input) then return end
                 while IsPrimaryHeld() do
-                    local M = GetGuiCursorPosition()
+                    local M = GetCursorPosition()
                     local MinX = TransparencyBoxInner.AbsolutePosition.X;
                     local MaxX = MinX + TransparencyBoxInner.AbsoluteSize.X;
                     local MouseX = math.clamp(M.X, MinX, MaxX);
@@ -1085,7 +1047,7 @@ do
 
         QuorumLib:GiveSignal(InputService.InputBegan:Connect(function(Input)
             if IsPrimaryPress(Input) then
-                local M = GetGuiCursorPosition()
+                local M = GetCursorPosition()
                 local AbsPos, AbsSize = PickerFrameOuter.AbsolutePosition, PickerFrameOuter.AbsoluteSize;
 
                 if M.X < AbsPos.X or M.X > AbsPos.X + AbsSize.X
@@ -1422,7 +1384,7 @@ do
             end;
 
             if IsPrimaryPress(Input) then
-                local M = GetGuiCursorPosition()
+                local M = GetCursorPosition()
                 local AbsPos, AbsSize = ModeSelectOuter.AbsolutePosition, ModeSelectOuter.AbsoluteSize;
 
                 if M.X < AbsPos.X or M.X > AbsPos.X + AbsSize.X
@@ -1878,28 +1840,19 @@ do
             end);
         end
 
-        -- https://devforum.roblox.com/t/how-to-make-textboxes-follow-current-cursor-position/1368429/6
-        -- thank you nicemike40 :)
-
         local function Update()
             local PADDING = 2
             local reveal = Container.AbsoluteSize.X
 
             if not Box:IsFocused() or Box.TextBounds.X <= reveal - 2 * PADDING then
-                -- we aren't focused, or we fit so be normal
                 Box.Position = UDim2.new(0, PADDING, 0, 0)
             else
-                -- we are focused and don't fit, so adjust position
                 local cursor = Box.CursorPosition
                 if cursor ~= -1 then
-                    -- calculate pixel width of text from start to cursor
                     local subtext = string.sub(Box.Text, 1, cursor-1)
                     local width = TextService:GetTextSize(subtext, Box.TextSize, Box.Font, Vector2.new(math.huge, math.huge)).X
-
-                    -- check if we're inside the box with the cursor
                     local currentCursorPos = Box.Position.X.Offset + width
 
-                    -- adjust if necessary
                     if currentCursorPos < PADDING then
                         Box.Position = UDim2.fromOffset(PADDING-width, 0)
                     elseif currentCursorPos > reveal - PADDING - 1 then
@@ -2045,7 +1998,7 @@ do
 
         ToggleRegion.InputBegan:Connect(function(Input)
             if IsPrimaryPress(Input) and not QuorumLib:MouseIsOverOpenedFrame() then
-                Toggle:SetValue(not Toggle.Value) -- Why was it not like this from the start?
+                Toggle:SetValue(not Toggle.Value)
                 QuorumLib:AttemptSave();
             end
         end);
@@ -2206,7 +2159,6 @@ do
                 return math.floor(Value);
             end;
 
-
             return tonumber(string.format('%.' .. Slider.Rounding .. 'f', Value))
         end;
 
@@ -2237,7 +2189,7 @@ do
                 local Diff = mPos - (Fill.AbsolutePosition.X + gPos);
 
                 while IsPrimaryHeld() do
-                    local nMPos = GetGuiCursorPosition().X;
+                    local nMPos = GetCursorPosition().X;
                     local nX = math.clamp(gPos + (nMPos - mPos) + Diff, 0, Slider.MaxSize);
 
                     local nValue = Slider:GetValueFromXOffset(nX);
@@ -2659,7 +2611,7 @@ do
 
         InputService.InputBegan:Connect(function(Input)
             if IsPrimaryPress(Input) then
-                local M = GetGuiCursorPosition()
+                local M = GetCursorPosition()
                 local AbsPos, AbsSize = ListOuter.AbsolutePosition, ListOuter.AbsoluteSize;
 
                 if M.X < AbsPos.X or M.X > AbsPos.X + AbsSize.X
@@ -2876,8 +2828,6 @@ do
     QuorumLib.Watermark = WatermarkOuter;
     QuorumLib.WatermarkText = WatermarkLabel;
     QuorumLib:MakeDraggable(QuorumLib.Watermark);
-
-
 
     local KeybindOuter = QuorumLib:Create('Frame', {
         AnchorPoint = Vector2.new(0, 0.5);
@@ -3351,7 +3301,6 @@ function QuorumLib:CreateWindow(...)
             local BoxInner = QuorumLib:Create('Frame', {
                 BackgroundColor3 = QuorumLib.BackgroundColor;
                 BorderColor3 = Color3.new(0, 0, 0);
-                -- BorderMode = Enum.BorderMode.Inset;
                 Size = UDim2.new(1, -2, 1, -2);
                 Position = UDim2.new(0, 1, 0, 1);
                 ZIndex = 4;
@@ -3451,7 +3400,6 @@ function QuorumLib:CreateWindow(...)
             local BoxInner = QuorumLib:Create('Frame', {
                 BackgroundColor3 = QuorumLib.BackgroundColor;
                 BorderColor3 = Color3.new(0, 0, 0);
-                -- BorderMode = Enum.BorderMode.Inset;
                 Size = UDim2.new(1, -2, 1, -2);
                 Position = UDim2.new(0, 1, 0, 1);
                 ZIndex = 4;
@@ -3607,7 +3555,6 @@ function QuorumLib:CreateWindow(...)
                 Tab:AddBlank(3);
                 Tab:Resize();
 
-                -- Show first tab (number is 2 cus of the UIListLayout that also sits in that instance)
                 if #TabboxButtons:GetChildren() == 2 then
                     Tab:Show();
                 end;
@@ -3634,7 +3581,6 @@ function QuorumLib:CreateWindow(...)
             end
         end);
 
-        -- This was the first tab added, so we show it by default.
         if #TabContainer:GetChildren() == 1 then
             Tab:ShowTab();
         end;
@@ -3667,12 +3613,10 @@ function QuorumLib:CreateWindow(...)
         ModalElement.Modal = Toggled;
 
         if Toggled then
-            -- A bit scuffed, but if we're going from not toggled -> toggled we want to show the frame immediately so that the fade is visible.
             Outer.Visible = true;
 
             if QuorumLib.UseCustomCursor and not IsTouchDevice then
                 task.spawn(function()
-                    -- TODO: add cursor fade?
                     local State = InputService.MouseIconEnabled;
 
                     local Cursor = Drawing.new('Triangle');
