@@ -82,6 +82,7 @@ local QuorumLib = {
     CursorDrawing = nil;
     CursorOutlineDrawing = nil;
     MenuToggled = false;
+    FixFirstPerson = true;
 };
 
 local RainbowStep = 0
@@ -366,7 +367,6 @@ function QuorumLib:GiveSignal(Signal)
     table.insert(QuorumLib.Signals, Signal)
 end
 
--- ИСПРАВЛЕННЫЙ КУРСОР (включая обход LockCenter)
 local function SpawnCustomCursor()
     if QuorumLib.CursorThread then return end
     if IsTouchDevice then return end
@@ -387,7 +387,10 @@ local function SpawnCustomCursor()
     QuorumLib.CursorThread = task.spawn(function()
         while QuorumLib.MenuToggled and QuorumLib.UseCustomCursor and ScreenGui.Parent do
             InputService.MouseIconEnabled = false;
-            InputService.MouseBehavior = Enum.MouseBehavior.Default -- Принудительно отвязываем от центра
+            
+            if QuorumLib.FixFirstPerson then
+                InputService.MouseBehavior = Enum.MouseBehavior.Default
+            end
             
             local mPos = InputService:GetMouseLocation();
             QuorumLib.CursorDrawing.Color = QuorumLib.AccentColor;
@@ -1719,26 +1722,18 @@ do
         QuorumLib:AddToRegistry(ToggleInner, { BackgroundColor3 = 'MainColor'; BorderColor3 = 'OutlineColor'; });
 
         local ToggleLabel = QuorumLib:CreateLabel({
-            Size = UDim2.new(0, 216, 1, 0);
-            Position = UDim2.new(1, 6, 0, 0);
+            Size = UDim2.new(1, -26, 1, 0);
+            Position = UDim2.new(0, 26, 0, 0);
             TextSize = 14;
             Text = Info.Text;
             TextXAlignment = Enum.TextXAlignment.Left;
             ZIndex = 6;
-            Parent = ToggleInner;
-        });
-
-        QuorumLib:Create('UIListLayout', {
-            Padding = UDim.new(0, 4);
-            FillDirection = Enum.FillDirection.Horizontal;
-            HorizontalAlignment = Enum.HorizontalAlignment.Right;
-            SortOrder = Enum.SortOrder.LayoutOrder;
-            Parent = ToggleLabel;
+            Parent = ToggleOuter;
         });
 
         local ToggleRegion = QuorumLib:Create('Frame', {
             BackgroundTransparency = 1;
-            Size = UDim2.new(0, 170, 1, 0);
+            Size = UDim2.new(1, 0, 1, 0);
             ZIndex = 8;
             Parent = ToggleOuter;
         });
@@ -1902,8 +1897,9 @@ do
             end
 
             local X = math.ceil(QuorumLib:MapValue(Slider.Value, Slider.Min, Slider.Max, 0, Slider.MaxSize));
-            Fill.Size = UDim2.new(0, X, 1, 0);
-            HideBorderRight.Visible = not (X == Slider.MaxSize or X == 0);
+            -- Масштабируем заполнение для адаптивного изменения размера
+            Fill.Size = UDim2.new((Slider.Value - Slider.Min) / (Slider.Max - Slider.Min), 0, 1, 0);
+            HideBorderRight.Visible = not (Slider.Value == Slider.Max or Slider.Value == Slider.Min);
         end;
 
         function Slider:OnChanged(Func)
@@ -1933,7 +1929,7 @@ do
         SliderInner.InputBegan:Connect(function(Input)
             if IsPrimaryPress(Input) and not QuorumLib:MouseIsOverOpenedFrame() then
                 local mPos = GetInputPosition(Input).X;
-                local gPos = Fill.Size.X.Offset;
+                local gPos = Fill.AbsoluteSize.X;
                 local Diff = mPos - (Fill.AbsolutePosition.X + gPos);
                 while IsPrimaryHeld() do
                     local nMPos = GetCursorPosition().X;
@@ -2643,7 +2639,6 @@ function QuorumLib:CreateWindow(...)
     if Config.UseCustomCursor == nil then Config.UseCustomCursor = true end
     QuorumLib.UseCustomCursor = Config.UseCustomCursor and true or false
 
-    -- Поддержка Config.Size
     local BaseSize = UDim2.fromOffset(550, 600)
     if Config.Size == "Small" then
         BaseSize = UDim2.fromOffset(450, 480)
@@ -2772,7 +2767,6 @@ function QuorumLib:CreateWindow(...)
         WindowLabel.Text = Title;
     end;
 
-    -- Функция изменения размера
     function Window:SetSize(NewSize)
         if NewSize == "Small" then NewSize = UDim2.fromOffset(450, 480)
         elseif NewSize == "Big" then NewSize = UDim2.fromOffset(700, 700)
@@ -2851,7 +2845,7 @@ function QuorumLib:CreateWindow(...)
             BackgroundTransparency = 1;
             BorderSizePixel = 0;
             Position = UDim2.new(0, 8 - 1, 0, 8 - 1);
-            Size = UDim2.new(0.5, -12 + 2, 0, 507 + 2);
+            Size = UDim2.new(0.5, -12 + 2, 1, -16 + 2);
             CanvasSize = UDim2.new(0, 0, 0, 0);
             BottomImage = '';
             TopImage = '';
@@ -2864,7 +2858,7 @@ function QuorumLib:CreateWindow(...)
             BackgroundTransparency = 1;
             BorderSizePixel = 0;
             Position = UDim2.new(0.5, 4 + 1, 0, 8 - 1);
-            Size = UDim2.new(0.5, -12 + 2, 0, 507 + 2);
+            Size = UDim2.new(0.5, -12 + 2, 1, -16 + 2);
             CanvasSize = UDim2.new(0, 0, 0, 0);
             BottomImage = '';
             TopImage = '';
@@ -3186,7 +3180,6 @@ function QuorumLib:CreateWindow(...)
             Outer.Visible = true;
             if QuorumLib.UseCustomCursor then SpawnCustomCursor() end;
         else
-            -- Возвращаем MouseBehavior когда меню закрывается
             if not IsTouchDevice then
                 InputService.MouseBehavior = Enum.MouseBehavior.Default
             end
