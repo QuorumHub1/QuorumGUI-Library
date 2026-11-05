@@ -697,8 +697,9 @@ do
             BorderColor3 = QuorumLib:GetDarkerColor(ColorPicker.Value);
             BorderMode = Enum.BorderMode.Inset;
             Size = UDim2.new(0, 28, 0, 14);
+            Position = UDim2.new(1, -30, 0.5, -7);
             ZIndex = 6;
-            Parent = ToggleLabel;
+            Parent = ToggleLabel;  -- ToggleLabel = self.TextLabel = LabelHolder
         });
 
         local CheckerFrame = QuorumLib:Create('ImageLabel', {
@@ -1251,6 +1252,7 @@ do
             BackgroundColor3 = Color3.new(0, 0, 0);
             BorderColor3 = Color3.new(0, 0, 0);
             Size = UDim2.new(0, 28, 0, 15);
+            Position = UDim2.new(1, -30, 0.5, -7);
             ZIndex = 6;
             Parent = ToggleLabel;
         });
