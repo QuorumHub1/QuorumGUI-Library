@@ -88,7 +88,7 @@ local QuorumLib = {
     Icons = nil;
 };
 
-local ICONS_URL = "https://raw.githubusercontent.com/QuorumHub1/QuorumGUI-Library/main/icons.lua"
+local ICONS_URL = "https://raw.githubusercontent.com/QuorumHub1/QuorumGUI-Library/main/Icons.luau"
 
 local function LoadIcons()
     if QuorumLib.Icons then return QuorumLib.Icons end
