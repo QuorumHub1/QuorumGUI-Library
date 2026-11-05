@@ -82,7 +82,7 @@ local QuorumLib = {
     CursorDrawing = nil;
     CursorOutlineDrawing = nil;
     MenuToggled = false;
-    FixFirstPerson = true;
+    UnlockCamera = true;
 };
 
 local RainbowStep = 0
@@ -388,8 +388,13 @@ local function SpawnCustomCursor()
         while QuorumLib.MenuToggled and QuorumLib.UseCustomCursor and ScreenGui.Parent do
             InputService.MouseIconEnabled = false;
             
-            if QuorumLib.FixFirstPerson then
-                InputService.MouseBehavior = Enum.MouseBehavior.Default
+            if QuorumLib.UnlockCamera then
+                local isFirstPerson = LocalPlayer.CameraMode == Enum.CameraMode.LockFirstPerson
+                local isShiftLock = InputService.MouseBehavior == Enum.MouseBehavior.LockCenter
+                
+                if isFirstPerson or isShiftLock then
+                    InputService.MouseBehavior = Enum.MouseBehavior.Default
+                end
             end
             
             local mPos = InputService:GetMouseLocation();
@@ -2845,7 +2850,7 @@ function QuorumLib:CreateWindow(...)
             BackgroundTransparency = 1;
             BorderSizePixel = 0;
             Position = UDim2.new(0, 8 - 1, 0, 8 - 1);
-            Size = UDim2.new(0.5, -12 + 2, 1, -16 + 2);
+            Size = UDim2.new(0.5, -12 + 2, 0, 507 + 2);
             CanvasSize = UDim2.new(0, 0, 0, 0);
             BottomImage = '';
             TopImage = '';
@@ -2858,7 +2863,7 @@ function QuorumLib:CreateWindow(...)
             BackgroundTransparency = 1;
             BorderSizePixel = 0;
             Position = UDim2.new(0.5, 4 + 1, 0, 8 - 1);
-            Size = UDim2.new(0.5, -12 + 2, 1, -16 + 2);
+            Size = UDim2.new(0.5, -12 + 2, 0, 507 + 2);
             CanvasSize = UDim2.new(0, 0, 0, 0);
             BottomImage = '';
             TopImage = '';
