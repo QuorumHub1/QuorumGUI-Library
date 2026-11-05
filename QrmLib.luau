@@ -1723,8 +1723,8 @@ do
         QuorumLib:AddToRegistry(ToggleInner, { BackgroundColor3 = 'MainColor'; BorderColor3 = 'OutlineColor'; });
 
         local ToggleLabel = QuorumLib:CreateLabel({
-            Size = UDim2.new(1, -26, 1, 0);
-            Position = UDim2.new(0, 26, 0, 0);
+            Size = UDim2.new(1, -32, 1, 0);
+            Position = UDim2.new(0, 32, 0, 0);
             TextSize = 14;
             Text = Info.Text;
             TextXAlignment = Enum.TextXAlignment.Left;
