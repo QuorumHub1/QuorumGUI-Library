@@ -35,11 +35,6 @@ local function IsPrimaryPress(Input)
         or Input.UserInputType == Enum.UserInputType.Touch
 end
 
-local function IsPrimaryRelease(Input)
-    return Input.UserInputType == Enum.UserInputType.MouseButton1
-        or Input.UserInputType == Enum.UserInputType.Touch
-end
-
 local function IsSecondaryPress(Input)
     if IsTouchDevice then
         return false
@@ -70,9 +65,9 @@ getgenv().Options = Options;
 
 local QuorumLib = {
     Registry = {};
-    RegistryMap = {};
+    RegistryMap = {},
 
-    HudRegistry = {};
+    HudRegistry = {},
 
     FontColor = Color3.fromRGB(255, 255, 255);
     MainColor = Color3.fromRGB(26, 27, 38);
@@ -93,6 +88,12 @@ local QuorumLib = {
     UseCustomCursor = true;
     MobileToggle = nil;
     KeybindFrame = nil;
+    
+    -- Новые переменные для курсора
+    CursorThread = nil;
+    CursorDrawing = nil;
+    CursorOutlineDrawing = nil;
+    MenuToggled = false;
 };
 
 local RainbowStep = 0
@@ -103,13 +104,8 @@ table.insert(QuorumLib.Signals, RenderStepped:Connect(function(Delta)
 
     if RainbowStep >= (1 / 60) then
         RainbowStep = 0
-
         Hue = Hue + (1 / 400);
-
-        if Hue > 1 then
-            Hue = 0;
-        end;
-
+        if Hue > 1 then Hue = 0; end;
         QuorumLib.CurrentRainbowHue = Hue;
         QuorumLib.CurrentRainbowColor = Color3.fromHSV(Hue, 0.8, 1);
     end
@@ -117,46 +113,29 @@ end))
 
 local function GetPlayersString()
     local PlayerList = Players:GetPlayers();
-
     for i = 1, #PlayerList do
         PlayerList[i] = PlayerList[i].Name;
     end;
-
     table.sort(PlayerList, function(str1, str2) return str1 < str2 end);
-
     return PlayerList;
 end;
 
 local function GetTeamsString()
     local TeamList = Teams:GetTeams();
-
     for i = 1, #TeamList do
         TeamList[i] = TeamList[i].Name;
     end;
-
     table.sort(TeamList, function(str1, str2) return str1 < str2 end);
-
     return TeamList;
 end;
 
 function QuorumLib:SafeCallback(f, ...)
-    if (not f) then
-        return;
-    end;
-
-    if not QuorumLib.NotifyOnError then
-        return f(...);
-    end;
-
+    if (not f) then return; end;
+    if not QuorumLib.NotifyOnError then return f(...); end;
     local success, event = pcall(f, ...);
-
     if not success then
         local _, i = event:find(":%d+: ");
-
-        if not i then
-            return QuorumLib:Notify(event);
-        end;
-
+        if not i then return QuorumLib:Notify(event); end;
         return QuorumLib:Notify(event:sub(i + 1), 3);
     end;
 end;
@@ -169,21 +148,17 @@ end;
 
 function QuorumLib:Create(Class, Properties)
     local _Instance = Class;
-
     if type(Class) == 'string' then
         _Instance = Instance.new(Class);
     end;
-
     for Property, Value in next, Properties do
         _Instance[Property] = Value;
     end;
-
     return _Instance;
 end;
 
 function QuorumLib:ApplyTextStroke(Inst)
     Inst.TextStrokeTransparency = 1;
-
     QuorumLib:Create('UIStroke', {
         Color = Color3.new(0, 0, 0);
         Thickness = 1;
@@ -202,7 +177,6 @@ function QuorumLib:CreateLabel(Properties, IsHud)
     });
 
     QuorumLib:ApplyTextStroke(_Instance);
-
     QuorumLib:AddToRegistry(_Instance, {
         TextColor3 = 'FontColor';
     }, IsHud);
@@ -212,22 +186,15 @@ end;
 
 function QuorumLib:MakeDraggable(Instance, Cutoff)
     Instance.Active = true;
-
     local Dragging = false
     local DragStart
     local StartPosition
 
     Instance.InputBegan:Connect(function(Input)
-        if not IsPrimaryPress(Input) then
-            return
-        end
-
+        if not IsPrimaryPress(Input) then return end
         local StartPos = GetInputPosition(Input)
         local Relative = StartPos - Instance.AbsolutePosition
-
-        if Relative.Y > (Cutoff or 40) then
-            return
-        end
+        if Relative.Y > (Cutoff or 40) then return end
 
         Dragging = true
         DragStart = StartPos
@@ -235,14 +202,8 @@ function QuorumLib:MakeDraggable(Instance, Cutoff)
     end)
 
     InputService.InputChanged:Connect(function(Input)
-        if not Dragging then
-            return
-        end
-
-        if Input.UserInputType ~= Enum.UserInputType.MouseMovement
-            and Input.UserInputType ~= Enum.UserInputType.Touch then
-            return
-        end
+        if not Dragging then return end
+        if Input.UserInputType ~= Enum.UserInputType.MouseMovement and Input.UserInputType ~= Enum.UserInputType.Touch then return end
 
         local Cur = GetInputPosition(Input)
         local Delta = Cur - DragStart
@@ -256,8 +217,7 @@ function QuorumLib:MakeDraggable(Instance, Cutoff)
     end)
 
     InputService.InputEnded:Connect(function(Input)
-        if Input.UserInputType == Enum.UserInputType.MouseButton1
-            or Input.UserInputType == Enum.UserInputType.Touch then
+        if Input.UserInputType == Enum.UserInputType.MouseButton1 or Input.UserInputType == Enum.UserInputType.Touch then
             Dragging = false
             DragStart = nil
         end
@@ -269,11 +229,9 @@ function QuorumLib:AddToolTip(InfoStr, HoverInstance)
     local Tooltip = QuorumLib:Create('Frame', {
         BackgroundColor3 = QuorumLib.MainColor,
         BorderColor3 = QuorumLib.OutlineColor,
-
         Size = UDim2.fromOffset(X + 5, Y + 4),
         ZIndex = 100,
         Parent = QuorumLib.ScreenGui,
-
         Visible = false,
     })
 
@@ -285,7 +243,6 @@ function QuorumLib:AddToolTip(InfoStr, HoverInstance)
         TextColor3 = QuorumLib.FontColor,
         TextXAlignment = Enum.TextXAlignment.Left;
         ZIndex = Tooltip.ZIndex + 1,
-
         Parent = Tooltip;
     });
 
@@ -302,12 +259,9 @@ function QuorumLib:AddToolTip(InfoStr, HoverInstance)
 
     HoverInstance.MouseEnter:Connect(function()
         if IsTouchDevice then return end
-        if QuorumLib:MouseIsOverOpenedFrame() then
-            return
-        end
+        if QuorumLib:MouseIsOverOpenedFrame() then return end
 
         IsHovering = true
-
         Tooltip.Position = UDim2.fromOffset(Mouse.X + 15, Mouse.Y + 12)
         Tooltip.Visible = true
 
@@ -326,10 +280,8 @@ end
 function QuorumLib:OnHighlight(HighlightInstance, Instance, Properties, PropertiesDefault)
     HighlightInstance.MouseEnter:Connect(function()
         local Reg = QuorumLib.RegistryMap[Instance];
-
         for Property, ColorIdx in next, Properties do
             Instance[Property] = QuorumLib[ColorIdx] or ColorIdx;
-
             if Reg and Reg.Properties[Property] then
                 Reg.Properties[Property] = ColorIdx;
             end;
@@ -338,10 +290,8 @@ function QuorumLib:OnHighlight(HighlightInstance, Instance, Properties, Properti
 
     HighlightInstance.MouseLeave:Connect(function()
         local Reg = QuorumLib.RegistryMap[Instance];
-
         for Property, ColorIdx in next, PropertiesDefault do
             Instance[Property] = QuorumLib[ColorIdx] or ColorIdx;
-
             if Reg and Reg.Properties[Property] then
                 Reg.Properties[Property] = ColorIdx;
             end;
@@ -352,10 +302,8 @@ end;
 function QuorumLib:MouseIsOverOpenedFrame()
     for Frame, _ in next, QuorumLib.OpenedFrames do
         local AbsPos, AbsSize = Frame.AbsolutePosition, Frame.AbsoluteSize;
-
         if Mouse.X >= AbsPos.X and Mouse.X <= AbsPos.X + AbsSize.X
             and Mouse.Y >= AbsPos.Y and Mouse.Y <= AbsPos.Y + AbsSize.Y then
-
             return true;
         end;
     end;
@@ -363,10 +311,8 @@ end;
 
 function QuorumLib:IsMouseOverFrame(Frame)
     local AbsPos, AbsSize = Frame.AbsolutePosition, Frame.AbsoluteSize;
-
     if Mouse.X >= AbsPos.X and Mouse.X <= AbsPos.X + AbsSize.X
         and Mouse.Y >= AbsPos.Y and Mouse.Y <= AbsPos.Y + AbsSize.Y then
-
         return true;
     end;
 end;
@@ -399,31 +345,20 @@ function QuorumLib:AddToRegistry(Instance, Properties, IsHud)
         Properties = Properties;
         Idx = Idx;
     };
-
     table.insert(QuorumLib.Registry, Data);
     QuorumLib.RegistryMap[Instance] = Data;
-
-    if IsHud then
-        table.insert(QuorumLib.HudRegistry, Data);
-    end;
+    if IsHud then table.insert(QuorumLib.HudRegistry, Data); end;
 end;
 
 function QuorumLib:RemoveFromRegistry(Instance)
     local Data = QuorumLib.RegistryMap[Instance];
-
     if Data then
         for Idx = #QuorumLib.Registry, 1, -1 do
-            if QuorumLib.Registry[Idx] == Data then
-                table.remove(QuorumLib.Registry, Idx);
-            end;
+            if QuorumLib.Registry[Idx] == Data then table.remove(QuorumLib.Registry, Idx); end;
         end;
-
         for Idx = #QuorumLib.HudRegistry, 1, -1 do
-            if QuorumLib.HudRegistry[Idx] == Data then
-                table.remove(QuorumLib.HudRegistry, Idx);
-            end;
+            if QuorumLib.HudRegistry[Idx] == Data then table.remove(QuorumLib.HudRegistry, Idx); end;
         end;
-
         QuorumLib.RegistryMap[Instance] = nil;
     end;
 end;
@@ -444,8 +379,57 @@ function QuorumLib:GiveSignal(Signal)
     table.insert(QuorumLib.Signals, Signal)
 end
 
+-- ИСПРАВЛЕННЫЙ КУРСОР
+local function SpawnCustomCursor()
+    if QuorumLib.CursorThread then return end -- Уже запущен
+    if IsTouchDevice then return end
+
+    local InitialState = InputService.MouseIconEnabled;
+    
+    QuorumLib.CursorDrawing = Drawing.new('Triangle');
+    QuorumLib.CursorDrawing.Thickness = 1;
+    QuorumLib.CursorDrawing.Filled = true;
+    QuorumLib.CursorDrawing.Visible = false;
+    
+    QuorumLib.CursorOutlineDrawing = Drawing.new('Triangle');
+    QuorumLib.CursorOutlineDrawing.Thickness = 1;
+    QuorumLib.CursorOutlineDrawing.Filled = false;
+    QuorumLib.CursorOutlineDrawing.Color = Color3.new(0, 0, 0);
+    QuorumLib.CursorOutlineDrawing.Visible = false;
+
+    QuorumLib.CursorThread = task.spawn(function()
+        while QuorumLib.MenuToggled and QuorumLib.UseCustomCursor and ScreenGui.Parent do
+            InputService.MouseIconEnabled = false;
+            
+            local mPos = InputService:GetMouseLocation();
+            QuorumLib.CursorDrawing.Color = QuorumLib.AccentColor;
+            QuorumLib.CursorDrawing.Visible = true;
+            QuorumLib.CursorOutlineDrawing.Visible = true;
+            
+            QuorumLib.CursorDrawing.PointA = Vector2.new(mPos.X, mPos.Y);
+            QuorumLib.CursorDrawing.PointB = Vector2.new(mPos.X + 16, mPos.Y + 6);
+            QuorumLib.CursorDrawing.PointC = Vector2.new(mPos.X + 6, mPos.Y + 16);
+            
+            QuorumLib.CursorOutlineDrawing.PointA = QuorumLib.CursorDrawing.PointA;
+            QuorumLib.CursorOutlineDrawing.PointB = QuorumLib.CursorDrawing.PointB;
+            QuorumLib.CursorOutlineDrawing.PointC = QuorumLib.CursorDrawing.PointC;
+            
+            RunService.RenderStepped:Wait();
+        end
+        
+        InputService.MouseIconEnabled = InitialState;
+        if QuorumLib.CursorDrawing then QuorumLib.CursorDrawing.Visible = false; QuorumLib.CursorDrawing:Remove(); QuorumLib.CursorDrawing = nil; end
+        if QuorumLib.CursorOutlineDrawing then QuorumLib.CursorOutlineDrawing.Visible = false; QuorumLib.CursorOutlineDrawing:Remove(); QuorumLib.CursorOutlineDrawing = nil; end
+        
+        QuorumLib.CursorThread = nil
+    end)
+end
+
 function QuorumLib:SetCustomCursor(Enabled)
     QuorumLib.UseCustomCursor = Enabled and true or false;
+    if QuorumLib.UseCustomCursor and QuorumLib.MenuToggled then
+        SpawnCustomCursor()
+    end
 end;
 
 function QuorumLib:SetKeybindVisibility(Bool)
@@ -460,9 +444,7 @@ function QuorumLib:Unload()
         Connection:Disconnect()
     end
 
-    if QuorumLib.OnUnload then
-        QuorumLib.OnUnload()
-    end
+    if QuorumLib.OnUnload then QuorumLib.OnUnload() end
 
     if QuorumLib.MobileToggle then
         pcall(function() QuorumLib.MobileToggle:Destroy() end)
@@ -493,7 +475,6 @@ do
 
     function Funcs:AddColorPicker(Idx, Info)
         local ToggleLabel = self.TextLabel;
-
         assert(Info.Default, 'AddColorPicker: Missing default value.');
 
         local ColorPicker = {
@@ -506,7 +487,6 @@ do
 
         function ColorPicker:SetHSVFromRGB(Color)
             local H, S, V = Color3.toHSV(Color);
-
             ColorPicker.Hue = H;
             ColorPicker.Sat = S;
             ColorPicker.Vib = V;
@@ -740,14 +720,12 @@ do
             Parent = PickerFrameInner;
         });
 
-
         local ContextMenu = {}
         do
             ContextMenu.Options = {}
             ContextMenu.Container = QuorumLib:Create('Frame', {
                 BorderColor3 = Color3.new(),
                 ZIndex = 14,
-
                 Visible = false,
                 Parent = ScreenGui
             })
@@ -960,7 +938,6 @@ do
 
         function ColorPicker:SetValue(HSV, Transparency)
             local Color = Color3.fromHSV(HSV[1], HSV[2], HSV[3]);
-
             ColorPicker.Transparency = Transparency or 0;
             ColorPicker:SetHSVFromRGB(Color);
             ColorPicker:Display();
@@ -1222,9 +1199,7 @@ do
         end;
 
         function KeyPicker:Update()
-            if Info.NoUI then
-                return;
-            end;
+            if Info.NoUI then return; end;
 
             local State = KeyPicker:GetState();
 
@@ -1254,12 +1229,8 @@ do
             if KeyPicker.Mode == 'Always' then
                 return true;
             elseif KeyPicker.Mode == 'Hold' then
-                if KeyPicker.Value == 'None' then
-                    return false;
-                end
-
+                if KeyPicker.Value == 'None' then return false; end
                 local Key = KeyPicker.Value;
-
                 if Key == 'MB1' or Key == 'MB2' then
                     return Key == 'MB1' and InputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1)
                         or Key == 'MB2' and InputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton2);
@@ -1317,10 +1288,8 @@ do
                         if Text == '...' then
                             Text = '';
                         end;
-
                         Text = Text .. '.';
                         DisplayLabel.Text = Text;
-
                         wait(0.4);
                     end;
                 end);
@@ -1778,30 +1747,24 @@ do
         local Container = QuorumLib:Create('Frame', {
             BackgroundTransparency = 1;
             ClipsDescendants = true;
-
             Position = UDim2.new(0, 5, 0, 0);
             Size = UDim2.new(1, -5, 1, 0);
-
             ZIndex = 7;
             Parent = TextBoxInner;
         })
 
         local Box = QuorumLib:Create('TextBox', {
             BackgroundTransparency = 1;
-
             Position = UDim2.fromOffset(0, 0),
             Size = UDim2.fromScale(5, 1),
-
             Font = QuorumLib.Font;
             PlaceholderColor3 = Color3.fromRGB(190, 190, 190);
             PlaceholderText = Info.Placeholder or '';
-
             Text = Info.Default or '';
             TextColor3 = QuorumLib.FontColor;
             TextSize = 14;
             TextStrokeTransparency = 0;
             TextXAlignment = Enum.TextXAlignment.Left;
-
             ZIndex = 7;
             Parent = Container;
         });
@@ -1829,7 +1792,6 @@ do
         if Textbox.Finished then
             Box.FocusLost:Connect(function(enter)
                 if not enter then return end
-
                 Textbox:SetValue(Box.Text);
                 QuorumLib:AttemptSave();
             end)
@@ -1892,7 +1854,6 @@ do
         local Toggle = {
             Value = Info.Default or false;
             Type = 'Toggle';
-
             Callback = Info.Callback or function(Value) end;
             Addons = {},
             Risky = Info.Risky,
@@ -2169,9 +2130,7 @@ do
         function Slider:SetValue(Str)
             local Num = tonumber(Str);
 
-            if (not Num) then
-                return;
-            end;
+            if (not Num) then return; end;
 
             Num = math.clamp(Num, Slider.Min, Slider.Max);
 
@@ -2231,22 +2190,19 @@ do
         assert(Info.Values, 'AddDropdown: Missing dropdown value list.');
         assert(Info.AllowNull or Info.Default, 'AddDropdown: Missing default value. Pass `AllowNull` as true if this was intentional.')
 
-        if (not Info.Text) then
-            Info.Compact = true;
-        end;
+        if (not Info.Text) then Info.Compact = true; end;
 
         local Dropdown = {
             Values = Info.Values;
             Value = Info.Multi and {};
             Multi = Info.Multi;
             Type = 'Dropdown';
-            SpecialType = Info.SpecialType; -- can be either 'Player' or 'Team'
+            SpecialType = Info.SpecialType;
             Callback = Info.Callback or function(Value) end;
         };
 
         local Groupbox = self;
         local Container = Groupbox.Container;
-
         local RelativeOffset = 0;
 
         if not Info.Compact then
@@ -2408,7 +2364,6 @@ do
                         Str = Str .. Value .. ', ';
                     end;
                 end;
-
                 Str = Str:sub(1, #Str - 2);
             else
                 Str = Dropdown.Value or '';
@@ -2420,11 +2375,9 @@ do
         function Dropdown:GetActiveValues()
             if Info.Multi then
                 local T = {};
-
                 for Value, Bool in next, Dropdown.Value do
                     table.insert(T, Value);
                 end;
-
                 return T;
             else
                 return Dropdown.Value and 1 or 0;
@@ -2506,7 +2459,6 @@ do
                         else
                             if Info.Multi then
                                 Selected = Try;
-
                                 if Selected then
                                     Dropdown.Value[Value] = true;
                                 else
@@ -2514,7 +2466,6 @@ do
                                 end;
                             else
                                 Selected = Try;
-
                                 if Selected then
                                     Dropdown.Value = Value;
                                 else
@@ -2553,7 +2504,6 @@ do
             if NewValues then
                 Dropdown.Values = NewValues;
             end;
-
             Dropdown:BuildDropdownList();
         end;
 
@@ -2577,13 +2527,11 @@ do
         function Dropdown:SetValue(Val)
             if Dropdown.Multi then
                 local nTable = {};
-
                 for Value, Bool in next, Val do
                     if table.find(Dropdown.Values, Value) then
                         nTable[Value] = true
                     end;
                 end;
-
                 Dropdown.Value = nTable;
             else
                 if (not Val) then
@@ -2629,15 +2577,11 @@ do
 
         if type(Info.Default) == 'string' then
             local Idx = table.find(Dropdown.Values, Info.Default)
-            if Idx then
-                table.insert(Defaults, Idx)
-            end
+            if Idx then table.insert(Defaults, Idx) end
         elseif type(Info.Default) == 'table' then
             for _, Value in next, Info.Default do
                 local Idx = table.find(Dropdown.Values, Value)
-                if Idx then
-                    table.insert(Defaults, Idx)
-                end
+                if Idx then table.insert(Defaults, Idx) end
             end
         elseif type(Info.Default) == 'number' and Dropdown.Values[Info.Default] ~= nil then
             table.insert(Defaults, Info.Default)
@@ -2651,7 +2595,6 @@ do
                 else
                     Dropdown.Value = Dropdown.Values[Index];
                 end
-
                 if (not Info.Multi) then break end
             end
 
@@ -2668,10 +2611,7 @@ do
     end;
 
     function Funcs:AddDependencyBox()
-        local Depbox = {
-            Dependencies = {};
-        };
-
+        local Depbox = { Dependencies = {}; };
         local Groupbox = self;
         local Container = Groupbox.Container;
 
@@ -2700,13 +2640,8 @@ do
             Groupbox:Resize();
         end;
 
-        Layout:GetPropertyChangedSignal('AbsoluteContentSize'):Connect(function()
-            Depbox:Resize();
-        end);
-
-        Holder:GetPropertyChangedSignal('Visible'):Connect(function()
-            Depbox:Resize();
-        end);
+        Layout:GetPropertyChangedSignal('AbsoluteContentSize'):Connect(function() Depbox:Resize(); end);
+        Holder:GetPropertyChangedSignal('Visible'):Connect(function() Depbox:Resize(); end);
 
         function Depbox:Update()
             for _, Dependency in next, Depbox.Dependencies do
@@ -2736,9 +2671,7 @@ do
         end;
 
         Depbox.Container = Frame;
-
         setmetatable(Depbox, BaseGroupbox);
-
         table.insert(QuorumLib.DependencyBoxes, Depbox);
 
         return Depbox;
@@ -2785,9 +2718,7 @@ do
         Parent = WatermarkOuter;
     });
 
-    QuorumLib:AddToRegistry(WatermarkInner, {
-        BorderColor3 = 'AccentColor';
-    });
+    QuorumLib:AddToRegistry(WatermarkInner, { BorderColor3 = 'AccentColor'; });
 
     local InnerFrame = QuorumLib:Create('Frame', {
         BackgroundColor3 = Color3.new(1, 1, 1);
@@ -2869,7 +2800,6 @@ do
         Size = UDim2.new(1, 0, 0, 20);
         Position = UDim2.fromOffset(5, 2),
         TextXAlignment = Enum.TextXAlignment.Left,
-
         Text = 'Keybinds';
         ZIndex = 104;
         Parent = KeybindInner;
@@ -2907,13 +2837,11 @@ function QuorumLib:SetWatermark(Text)
     local X, Y = QuorumLib:GetTextBounds(Text, QuorumLib.Font, 14);
     QuorumLib.Watermark.Size = UDim2.new(0, X + 15, 0, (Y * 1.5) + 3);
     QuorumLib:SetWatermarkVisibility(true)
-
     QuorumLib.WatermarkText.Text = Text;
 end;
 
 function QuorumLib:Notify(Text, Time)
     local XSize, YSize = QuorumLib:GetTextBounds(Text, QuorumLib.Font, 14);
-
     YSize = YSize + 7
 
     local NotifyOuter = QuorumLib:Create('Frame', {
@@ -2993,11 +2921,8 @@ function QuorumLib:Notify(Text, Time)
 
     task.spawn(function()
         wait(Time or 5);
-
         pcall(NotifyOuter.TweenSize, NotifyOuter, UDim2.new(0, 0, 0, YSize), 'Out', 'Quad', 0.4, true);
-
         wait(0.4);
-
         NotifyOuter:Destroy();
     end);
 end;
@@ -3599,7 +3524,6 @@ function QuorumLib:CreateWindow(...)
     });
 
     local TransparencyCache = {};
-    local Toggled = false;
     local Fading = false;
 
     function QuorumLib:Toggle()
@@ -3609,51 +3533,15 @@ function QuorumLib:CreateWindow(...)
 
         local FadeTime = Config.MenuFadeTime;
         Fading = true;
-        Toggled = (not Toggled);
-        ModalElement.Modal = Toggled;
+        QuorumLib.MenuToggled = (not QuorumLib.MenuToggled);
+        ModalElement.Modal = QuorumLib.MenuToggled;
 
-        if Toggled then
+        if QuorumLib.MenuToggled then
             Outer.Visible = true;
-
-            if QuorumLib.UseCustomCursor and not IsTouchDevice then
-                task.spawn(function()
-                    local State = InputService.MouseIconEnabled;
-
-                    local Cursor = Drawing.new('Triangle');
-                    Cursor.Thickness = 1;
-                    Cursor.Filled = true;
-                    Cursor.Visible = true;
-
-                    local CursorOutline = Drawing.new('Triangle');
-                    CursorOutline.Thickness = 1;
-                    CursorOutline.Filled = false;
-                    CursorOutline.Color = Color3.new(0, 0, 0);
-                    CursorOutline.Visible = true;
-
-                    while Toggled and QuorumLib.UseCustomCursor and ScreenGui.Parent do
-                        InputService.MouseIconEnabled = false;
-
-                        local mPos = InputService:GetMouseLocation();
-
-                        Cursor.Color = QuorumLib.AccentColor;
-
-                        Cursor.PointA = Vector2.new(mPos.X, mPos.Y);
-                        Cursor.PointB = Vector2.new(mPos.X + 16, mPos.Y + 6);
-                        Cursor.PointC = Vector2.new(mPos.X + 6, mPos.Y + 16);
-
-                        CursorOutline.PointA = Cursor.PointA;
-                        CursorOutline.PointB = Cursor.PointB;
-                        CursorOutline.PointC = Cursor.PointC;
-
-                        RenderStepped:Wait();
-                    end;
-
-                    InputService.MouseIconEnabled = State;
-
-                    Cursor:Remove();
-                    CursorOutline:Remove();
-                end);
-            end;
+            -- Вызов спавна курсора при открытии
+            if QuorumLib.UseCustomCursor then
+                SpawnCustomCursor()
+            end
         end;
 
         for _, Desc in next, Outer:GetDescendants() do
@@ -3686,13 +3574,13 @@ function QuorumLib:CreateWindow(...)
                     continue;
                 end;
 
-                TweenService:Create(Desc, TweenInfo.new(FadeTime, Enum.EasingStyle.Linear), { [Prop] = Toggled and Cache[Prop] or 1 }):Play();
+                TweenService:Create(Desc, TweenInfo.new(FadeTime, Enum.EasingStyle.Linear), { [Prop] = QuorumLib.MenuToggled and Cache[Prop] or 1 }):Play();
             end;
         end;
 
         task.wait(FadeTime);
 
-        Outer.Visible = Toggled;
+        Outer.Visible = QuorumLib.MenuToggled;
 
         Fading = false;
     end
