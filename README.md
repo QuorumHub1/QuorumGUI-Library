@@ -41,6 +41,24 @@ local Window = QuorumLib:CreateWindow({
 })
 ```
 
+### Window Methods
+Methods that can be called directly on the `Window` object.
+
+#### SetSize
+```lua
+-- Valid presets: 'Small', 'Default', 'Big'
+-- Or pass a number (pixels) or a UDim2 object
+Window:SetSize('Big') 
+Window:SetSize(UDim2.fromOffset(600, 500))
+Window:SetSize(550)
+```
+*Note: When passing a number, the height is automatically calculated as `number * 1.1`.*
+
+#### SetWindowTitle
+```lua
+Window:SetWindowTitle('<settings>New Title')
+```
+
 ### Tabs
 ```lua
 local Tab = Window:AddTab('<settings>Settings')
@@ -227,6 +245,26 @@ QuorumLib:SetKeybindVisibility(true) -- Show/hide the keybind list overlay
 ```lua
 QuorumLib:SetCustomCursor(true)
 QuorumLib.UnlockCamera = true -- Unlocks camera from shift-lock when menu is open
+```
+
+### Keybind Visibility
+Shows or hides the floating keybind list overlay on the left side of the screen.
+```lua
+QuorumLib:SetKeybindVisibility(true)  -- Show
+QuorumLib:SetKeybindVisibility(false) -- Hide
+```
+
+### GetKeybindState
+Checks if a specific keybind is currently active (useful for `Hold` mode).
+```lua
+-- Returns true if the keybind is currently held/toggled
+local isHeld = Options.MyKeybind:GetState()
+```
+
+### Save Attempt
+Forces the `SaveManager` to save the current configuration immediately (usually handled automatically by the library).
+```lua
+QuorumLib:AttemptSave()
 ```
 
 ### Unload
