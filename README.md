@@ -13,7 +13,7 @@ A modern, lightweight, and highly customizable UI library for Roblox exploits.
 
 Load the library using your executor's `loadstring`:
 
-```lua
+```luau
 local repo = 'https://raw.githubusercontent.com/QuorumHub1/QuorumGUI-Library/main/'
 
 local QuorumLib = loadstring(game:HttpGet(repo .. 'QrmLib.luau'))()
@@ -23,12 +23,12 @@ local SaveManager = loadstring(game:HttpGet(repo .. 'QrmSaveSettings.luau'))()
 
 > **Note:** You can find a fully working example in the `Example.luau` file in this repository.
 
-```
+---
 
 ## API Reference
 
 ### Window Creation
-```lua
+```luau
 local Window = QuorumLib:CreateWindow({
     Title = '<home>My Menu', -- Supports icons
     Center = true,            -- Centers the window on screen
@@ -45,7 +45,7 @@ local Window = QuorumLib:CreateWindow({
 Methods that can be called directly on the `Window` object.
 
 #### SetSize
-```lua
+```luau
 -- Valid presets: 'Small', 'Default', 'Big'
 -- Or pass a number (pixels) or a UDim2 object
 Window:SetSize('Big') 
@@ -55,19 +55,19 @@ Window:SetSize(550)
 *Note: When passing a number, the height is automatically calculated as `number * 1.1`.*
 
 #### SetWindowTitle
-```lua
+```luau
 Window:SetWindowTitle('<settings>New Title')
 ```
 
 ### Tabs
-```lua
+```luau
 local Tab = Window:AddTab('<settings>Settings')
 ```
 
 ### Groupboxes
 Groupboxes divide your tab into left and right columns. You can also create a Tabbox (a box with internal tabs).
 
-```lua
+```luau
 -- Left side
 local LeftGroup = Tab:AddLeftGroupbox('Main Settings')
 
@@ -82,7 +82,7 @@ local SubTab1 = TabBox:AddTab('Sub Tab 1')
 ### Elements
 
 #### Toggle
-```lua
+```luau
 LeftGroup:AddToggle('MyToggle', {
     Text = '<zap> Enable Feature',
     Default = true,
@@ -94,7 +94,7 @@ LeftGroup:AddToggle('MyToggle', {
 ```
 
 #### Button
-```lua
+```luau
 LeftGroup:AddButton({
     Text = 'Click Me',
     Func = function()
@@ -117,7 +117,7 @@ MyButton:AddButton({
 ```
 
 #### Label
-```lua
+```luau
 LeftGroup:AddLabel('This is a label')
 
 -- With icon
@@ -128,12 +128,12 @@ LeftGroup:AddLabel('This is a very long label that will wrap to multiple lines!'
 ```
 
 #### Divider
-```lua
+```luau
 LeftGroup:AddDivider()
 ```
 
 #### Slider
-```lua
+```luau
 LeftGroup:AddSlider('MySlider', {
     Text = 'Walk Speed',
     Default = 16,
@@ -149,7 +149,7 @@ LeftGroup:AddSlider('MySlider', {
 ```
 
 #### Input (Textbox)
-```lua
+```luau
 LeftGroup:AddInput('MyInput', {
     Text = 'Enter Name',
     Default = '',
@@ -163,7 +163,7 @@ LeftGroup:AddInput('MyInput', {
 ```
 
 #### Dropdown
-```lua
+```luau
 LeftGroup:AddDropdown('MyDropdown', {
     Values = { 'Option 1', 'Option 2', 'Option 3' },
     Default = 1, -- Index or Value
@@ -182,7 +182,7 @@ LeftGroup:AddDropdown('PlayerDropdown', {
 ```
 
 #### Color Picker
-```lua
+```luau
 LeftGroup:AddLabel('Color'):AddColorPicker('MyColor', {
     Default = Color3.new(1, 0, 0),
     Title = 'Pick a Color',
@@ -194,7 +194,7 @@ LeftGroup:AddLabel('Color'):AddColorPicker('MyColor', {
 ```
 
 #### Key Picker (Keybind)
-```lua
+```luau
 LeftGroup:AddLabel('Keybind'):AddKeyPicker('MyKeybind', {
     Default = 'E',
     SyncToggleState = false, -- If true, the keybind toggles a linked toggle
@@ -208,7 +208,7 @@ LeftGroup:AddLabel('Keybind'):AddKeyPicker('MyKeybind', {
 ```
 
 #### Dependency Box
-```lua
+```luau
 local Toggle = LeftGroup:AddToggle('EnableFeature', { Text = 'Enable Feature' })
 
 local Depbox = LeftGroup:AddDependencyBox()
@@ -219,67 +219,67 @@ Depbox:SetupDependencies({
 })
 ```
 
-```
+---
 
 ## Library Methods
 
 ### Notifications
-```lua
+```luau
 QuorumLib:Notify('Message', 5, 'TopLeft') 
 -- Time (seconds), Position ('TopLeft', 'TopRight', 'BottomLeft', 'BottomRight')
 ```
 
 ### Watermark
-```lua
+```luau
 QuorumLib:SetWatermarkVisibility(true)
 QuorumLib:SetWatermark('Quorum | 60 FPS | 20ms')
 ```
 
 ### Menu Toggle & Keybinds
-```lua
+```luau
 QuorumLib.ToggleKeybind = Options.MyKeybind -- Assign a keybind to open/close the menu
 QuorumLib:SetKeybindVisibility(true) -- Show/hide the keybind list overlay
 ```
 
 ### Custom Cursor & Camera
-```lua
+```luau
 QuorumLib:SetCustomCursor(true)
 QuorumLib.UnlockCamera = true -- Unlocks camera from shift-lock when menu is open
 ```
 
 ### Keybind Visibility
 Shows or hides the floating keybind list overlay on the left side of the screen.
-```lua
+```luau
 QuorumLib:SetKeybindVisibility(true)  -- Show
 QuorumLib:SetKeybindVisibility(false) -- Hide
 ```
 
 ### GetKeybindState
 Checks if a specific keybind is currently active (useful for `Hold` mode).
-```lua
+```luau
 -- Returns true if the keybind is currently held/toggled
 local isHeld = Options.MyKeybind:GetState()
 ```
 
 ### Save Attempt
 Forces the `SaveManager` to save the current configuration immediately (usually handled automatically by the library).
-```lua
+```luau
 QuorumLib:AttemptSave()
 ```
 
 ### Unload
-```lua
+```luau
 QuorumLib:Unload()
 ```
 
-```
+---
 
 ## Config & Saving (QrmSaveSettings)
 
 The `SaveManager` allows you to save toggles, sliders, and inputs to a JSON file, so users don't have to reconfigure the script every time they execute it.
 
 ### Setup
-```lua
+```luau
 local SaveManager = loadstring(game:HttpGet(repo .. 'QrmSaveSettings.luau'))()
 
 -- Initialize the library
@@ -291,13 +291,13 @@ SaveManager:SetFolder('QuorumHub/specific-game')
 ```
 
 ### Building the Config UI
-```lua
+```luau
 -- This automatically adds a "Config" section (with Save/Load/Delete buttons) to the specified tab.
 SaveManager:BuildConfigSection(Tabs['UI Settings'])
 ```
 
 ### Autoload Config
-```lua
+```luau
 -- Automatically loads the config file named "autoload.json" when the script runs (if it exists).
 SaveManager:LoadAutoloadConfig()
 ```
@@ -305,7 +305,7 @@ SaveManager:LoadAutoloadConfig()
 ### Ignoring Elements
 If you have elements that shouldn't be saved (like a menu keybind or a theme selector), you can ignore them:
 
-```lua
+```luau
 -- Ignore all settings related to the Theme Manager
 SaveManager:IgnoreThemeSettings()
 
@@ -313,13 +313,13 @@ SaveManager:IgnoreThemeSettings()
 SaveManager:SetIgnoreIndexes({ 'MenuKeybind' })
 ```
 
-```
+---
 
 ## Themes (QrmThemes)
 
 Allows users to change the UI's color scheme.
 
-```lua
+```luau
 local ThemeManager = loadstring(game:HttpGet(repo .. 'QrmThemes.luau'))()
 
 ThemeManager:SetLibrary(QuorumLib)
@@ -331,7 +331,7 @@ ThemeManager:SetFolder('QuorumHub')
 ThemeManager:ApplyToTab(Tabs['UI Settings'])
 ```
 
-```
+---
 
 ## Icons (Lucide)
 To use an icon, simply wrap its name in `<>` (e.g., `<sword>`).
@@ -339,16 +339,16 @@ To use an icon, simply wrap its name in `<>` (e.g., `<sword>`).
 - **Icon List:** Search for icon names at [Lucide.dev](https://lucide.dev/).
 - **Important:** You must set `UseIcons = true` in `CreateWindow` for icons to load.
 
-```
+---
 
 ## Mobile Support
 The library automatically detects mobile devices and scales the window, adding a toggle button in the bottom right corner.
 
-```
+---
 
 # Usage Example (`Example.luau`)
 
-```lua
+```luau
 local repo = 'https://raw.githubusercontent.com/QuorumHub1/QuorumGUI-Library/main/'
 
 local QuorumLib = loadstring(game:HttpGet(repo .. 'QrmLib.luau'))()
