@@ -23,7 +23,7 @@ local SaveManager = loadstring(game:HttpGet(repo .. 'QrmSaveSettings.luau'))()
 
 > **Note:** You can find a fully working example in the `Example.luau` file in this repository.
 
-```
+---
 
 ## API Reference
 
