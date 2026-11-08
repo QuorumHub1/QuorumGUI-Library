@@ -23,7 +23,7 @@ local SaveManager = loadstring(game:HttpGet(repo .. 'QrmSaveSettings.luau'))()
 
 > **Note:** You can find a fully working example in the `Example.luau` file in this repository.
 
----
+```
 
 ## API Reference
 
@@ -219,7 +219,7 @@ Depbox:SetupDependencies({
 })
 ```
 
----
+```
 
 ## Library Methods
 
@@ -272,7 +272,7 @@ QuorumLib:AttemptSave()
 QuorumLib:Unload()
 ```
 
----
+```
 
 ## Config & Saving (QrmSaveSettings)
 
@@ -313,7 +313,7 @@ SaveManager:IgnoreThemeSettings()
 SaveManager:SetIgnoreIndexes({ 'MenuKeybind' })
 ```
 
----
+```
 
 ## Themes (QrmThemes)
 
@@ -331,7 +331,7 @@ ThemeManager:SetFolder('QuorumHub')
 ThemeManager:ApplyToTab(Tabs['UI Settings'])
 ```
 
----
+```
 
 ## Icons (Lucide)
 To use an icon, simply wrap its name in `<>` (e.g., `<sword>`).
@@ -339,12 +339,15 @@ To use an icon, simply wrap its name in `<>` (e.g., `<sword>`).
 - **Icon List:** Search for icon names at [Lucide.dev](https://lucide.dev/).
 - **Important:** You must set `UseIcons = true` in `CreateWindow` for icons to load.
 
----
+```
 
 ## Mobile Support
 The library automatically detects mobile devices and scales the window, adding a toggle button in the bottom right corner.
 
-# Usage Example
+```
+
+# Usage Example (`Example.luau`)
+
 ```lua
 local repo = 'https://raw.githubusercontent.com/QuorumHub1/QuorumGUI-Library/main/'
 
@@ -364,6 +367,8 @@ local Window = QuorumLib:CreateWindow({
     UseCustomCursor = true,
     UseIcons = true -- Use Lucide.dev to get icons ID
 })
+
+-- Window:SetSize('Small') -- Uncomment to test
 
 local Tabs = {
     Main = Window:AddTab('<home>Main'),
@@ -724,3 +729,4 @@ SaveManager:BuildConfigSection(Tabs['UI Settings'])
 ThemeManager:ApplyToTab(Tabs['UI Settings'])
 
 SaveManager:LoadAutoloadConfig()
+```
