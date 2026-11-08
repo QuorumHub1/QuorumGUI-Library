@@ -9,8 +9,6 @@ A modern, lightweight, and highly customizable UI library for Roblox exploits.
 - **Responsive:** Adapts to mobile devices automatically.
 - **Smooth Animations:** Fade-in/out effects and smooth dragging.
 
-```
-
 ## Getting Started
 
 Load the library using your executor's `loadstring`:
