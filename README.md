@@ -1,4 +1,5 @@
 # Quorum UI Library
+**Quorum UI is an improved fork of the [Linoria library](https://github.com/violin-suzutsuki/LinoriaLib/tree/main)**, rebuilt with a fresh aesthetic, Lucide icon support, and a completely reworked config system.
 
 A modern, lightweight, and highly customizable UI library for Roblox exploits.
 
