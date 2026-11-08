@@ -242,7 +242,7 @@ To use an icon, simply wrap its name in `<>` (e.g., `<sword>`).
 - **Icon List:** Search for icon names at [Lucide.dev](https://lucide.dev/).
 - **Important:** You must set `UseIcons = true` in `CreateWindow` for icons to load.
 
-```
+---
 
 ## Mobile Support
 The library automatically detects mobile devices and scales the window, adding a toggle button in the bottom right corner.
