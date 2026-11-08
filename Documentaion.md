@@ -201,7 +201,7 @@ Depbox:SetupDependencies({
 })
 ```
 
-```
+---
 
 ## Library Methods
 
@@ -247,7 +247,7 @@ To use an icon, simply wrap its name in `<>` (e.g., `<sword>`).
 ## Mobile Support
 The library automatically detects mobile devices and scales the window, adding a toggle button in the bottom right corner.
 
-# Example.luau
+# Usage Example
 ```lua
 local repo = 'https://raw.githubusercontent.com/QuorumHub1/QuorumGUI-Library/main/'
 
