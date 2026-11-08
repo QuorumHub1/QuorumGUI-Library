@@ -236,6 +236,65 @@ QuorumLib:Unload()
 
 ---
 
+## Config & Saving (QrmSaveSettings)
+
+The `SaveManager` allows you to save toggles, sliders, and inputs to a JSON file, so users don't have to reconfigure the script every time they execute it.
+
+### Setup
+```lua
+local SaveManager = loadstring(game:HttpGet(repo .. 'QrmSaveSettings.luau'))()
+
+-- Initialize the library
+SaveManager:SetLibrary(QuorumLib)
+
+-- Set the folder where configs will be saved.
+-- It's highly recommended to use the game's PlaceId so configs don't mix between games.
+SaveManager:SetFolder('QuorumHub/specific-game') 
+```
+
+### Building the Config UI
+```lua
+-- This automatically adds a "Config" section (with Save/Load/Delete buttons) to the specified tab.
+SaveManager:BuildConfigSection(Tabs['UI Settings'])
+```
+
+### Autoload Config
+```lua
+-- Automatically loads the config file named "autoload.json" when the script runs (if it exists).
+SaveManager:LoadAutoloadConfig()
+```
+
+### Ignoring Elements
+If you have elements that shouldn't be saved (like a menu keybind or a theme selector), you can ignore them:
+
+```lua
+-- Ignore all settings related to the Theme Manager
+SaveManager:IgnoreThemeSettings()
+
+-- Ignore specific indexes by their option name (e.g., the keybind to open the menu)
+SaveManager:SetIgnoreIndexes({ 'MenuKeybind' })
+```
+
+---
+
+## Themes (QrmThemes)
+
+Allows users to change the UI's color scheme.
+
+```lua
+local ThemeManager = loadstring(game:HttpGet(repo .. 'QrmThemes.luau'))()
+
+ThemeManager:SetLibrary(QuorumLib)
+
+-- Set folder for saving custom themes
+ThemeManager:SetFolder('QuorumHub')
+
+-- This adds a "Theme" section to the specified tab with a dropdown to select themes and a color picker to edit them.
+ThemeManager:ApplyToTab(Tabs['UI Settings'])
+```
+
+---
+
 ## Icons (Lucide)
 To use an icon, simply wrap its name in `<>` (e.g., `<sword>`).
 - **Format:** `<icon-name>`
