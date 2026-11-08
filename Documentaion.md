@@ -234,7 +234,7 @@ QuorumLib.UnlockCamera = true -- Unlocks camera from shift-lock when menu is ope
 QuorumLib:Unload()
 ```
 
-```
+---
 
 ## Icons (Lucide)
 To use an icon, simply wrap its name in `<>` (e.g., `<sword>`).
