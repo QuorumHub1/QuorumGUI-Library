@@ -1,7 +1,10 @@
 # Quorum UI Library
 **Quorum UI is an improved fork of the [Linoria library](https://github.com/violin-suzutsuki/LinoriaLib/tree/main)**, rebuilt with a fresh aesthetic, Lucide icon support, and a completely reworked config system.
 
-A modern, lightweight, and highly customizable UI library for Roblox exploits.
+A modern, lightweight, and highly customizable UI library for Roblox UIs.
+
+## Interface Preview
+![Quorum UI Interface Preview](InterfacePreview.png)
 
 ## Features
 - **Icons Support:** Use any icon from [Lucide.dev](https://lucide.dev/) by wrapping the name in `<>` (e.g., `<home>`, `<sword>`).
@@ -12,7 +15,7 @@ A modern, lightweight, and highly customizable UI library for Roblox exploits.
 
 ## Getting Started
 
-Load the library using your executor's `loadstring`:
+Load the library using your tool's `loadstring`:
 
 ```luau
 local repo = 'https://raw.githubusercontent.com/QuorumHub1/QuorumGUI-Library/main/'
