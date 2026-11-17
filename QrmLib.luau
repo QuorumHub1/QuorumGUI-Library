@@ -17,6 +17,134 @@ local Mouse = LocalPlayer:GetMouse();
 
 local ProtectGui = protectgui or (syn and syn.protect_gui) or (function() end);
 
+local DrawingSupported = false
+do
+    local ok = pcall(function()
+        local d = Drawing.new('Square')
+        if d then
+            d.Visible = false
+            d:Remove()
+        end
+    end)
+    DrawingSupported = ok
+end
+
+if not DrawingSupported then
+    task.spawn(function()
+        local CoreGui = game:GetService('CoreGui')
+        local StarterGui = game:GetService('StarterGui')
+        local confirm
+        local done = false
+        local result = false
+        task.spawn(function()
+            local ok, err = pcall(function()
+                StarterGui:SetCore('SendNotification', {
+                    Title = 'Quorum UI',
+                    Text = 'Drawing library is missing / not implemented as it should be. Would you like to proceed?',
+                    Duration = 15,
+                    Icon = 'rbxassetid://0'
+                })
+            end)
+        end)
+        local ok = pcall(function()
+            confirm = Instance.new('BindableEvent')
+            StarterGui:SetCore('SendNotification', {
+                Title = 'Quorum UI',
+                Text = 'Drawing library is missing / not implemented as it should be. Would you like to proceed?',
+                Duration = 15,
+                Icon = 'rbxassetid://0'
+            })
+        end)
+
+        local function showPrompt()
+            local gui = Instance.new('ScreenGui')
+            gui.Name = 'QuorumDrawingPrompt'
+            gui.ResetOnSpawn = false
+            gui.Parent = CoreGui
+            local frame = Instance.new('Frame')
+            frame.Size = UDim2.fromOffset(360, 150)
+            frame.Position = UDim2.new(0.5, 0, 0.5, 0)
+            frame.AnchorPoint = Vector2.new(0.5, 0.5)
+            frame.BackgroundColor3 = Color3.fromRGB(26, 27, 38)
+            frame.BorderSizePixel = 0
+            frame.Parent = gui
+            local title = Instance.new('TextLabel')
+            title.Size = UDim2.new(1, -20, 0, 22)
+            title.Position = UDim2.fromOffset(10, 8)
+            title.BackgroundTransparency = 1
+            title.Font = Enum.Font.Code
+            title.TextSize = 15
+            title.TextColor3 = Color3.fromRGB(255, 255, 255)
+            title.TextXAlignment = Enum.TextXAlignment.Left
+            title.Text = 'Drawing library missing'
+            title.Parent = frame
+            local body = Instance.new('TextLabel')
+            body.Size = UDim2.new(1, -20, 0, 60)
+            body.Position = UDim2.fromOffset(10, 32)
+            body.BackgroundTransparency = 1
+            body.Font = Enum.Font.Code
+            body.TextSize = 13
+            body.TextWrapped = true
+            body.TextColor3 = Color3.fromRGB(190, 190, 190)
+            body.TextXAlignment = Enum.TextXAlignment.Left
+            body.TextYAlignment = Enum.TextYAlignment.Top
+            body.Text = 'Drawing library is missing / not implemented as it should be. Would you like to proceed?'
+            body.Parent = frame
+            local yes = Instance.new('TextButton')
+            yes.Size = UDim2.fromOffset(100, 28)
+            yes.Position = UDim2.new(1, -220, 1, -38)
+            yes.BackgroundColor3 = Color3.fromRGB(122, 162, 247)
+            yes.BorderSizePixel = 0
+            yes.Font = Enum.Font.Code
+            yes.TextSize = 14
+            yes.TextColor3 = Color3.fromRGB(22, 22, 30)
+            yes.Text = 'Proceed'
+            yes.Parent = frame
+            local no = Instance.new('TextButton')
+            no.Size = UDim2.fromOffset(100, 28)
+            no.Position = UDim2.new(1, -110, 1, -38)
+            no.BackgroundColor3 = Color3.fromRGB(41, 46, 66)
+            no.BorderSizePixel = 0
+            no.Font = Enum.Font.Code
+            no.TextSize = 14
+            no.TextColor3 = Color3.fromRGB(255, 255, 255)
+            no.Text = 'Cancel'
+            no.Parent = frame
+            yes.MouseButton1Click:Connect(function()
+                result = true
+                done = true
+                gui:Destroy()
+            end)
+            no.MouseButton1Click:Connect(function()
+                result = false
+                done = true
+                gui:Destroy()
+            end)
+        end
+        showPrompt()
+        while not done do task.wait(0.1) end
+        if result then
+            getgenv().QuorumDrawingFallback = true
+            local ok, err = pcall(function()
+                StarterGui:SetCore('SendNotification', {
+                    Title = 'Quorum UI',
+                    Text = 'Proceeding without Drawing.',
+                    Duration = 5,
+                })
+            end)
+        else
+            getgenv().QuorumDrawingFallback = false
+            local ok, err = pcall(function()
+                StarterGui:SetCore('SendNotification', {
+                    Title = 'Quorum UI',
+                    Text = 'Cancelled.',
+                    Duration = 5,
+                })
+            end)
+        end
+    end)
+end
+
 local IsTouchDevice = InputService.TouchEnabled and not InputService.KeyboardEnabled;
 local IsMobile = IsTouchDevice;
 
@@ -583,65 +711,108 @@ local function SpawnCustomCursor()
     if QuorumLib.CursorThread then return end
     if IsTouchDevice then return end
 
-    local InitialState = InputService.MouseIconEnabled;
-    local LastIconState = InitialState
-    local LastMouseBehavior = nil
+    local useDrawing = DrawingSupported and not getgenv().QuorumDrawingFallback
 
-    QuorumLib.CursorDrawing = Drawing.new('Triangle');
-    QuorumLib.CursorDrawing.Thickness = 1;
-    QuorumLib.CursorDrawing.Filled = true;
-    QuorumLib.CursorDrawing.Visible = false;
+    if useDrawing then
+        local InitialState = InputService.MouseIconEnabled;
+        local LastIconState = InitialState
+        local LastMouseBehavior = nil
 
-    QuorumLib.CursorOutlineDrawing = Drawing.new('Triangle');
-    QuorumLib.CursorOutlineDrawing.Thickness = 1;
-    QuorumLib.CursorOutlineDrawing.Filled = false;
-    QuorumLib.CursorOutlineDrawing.Color = Color3.new(0, 0, 0);
-    QuorumLib.CursorOutlineDrawing.Visible = false;
+        QuorumLib.CursorDrawing = Drawing.new('Triangle');
+        QuorumLib.CursorDrawing.Thickness = 1;
+        QuorumLib.CursorDrawing.Filled = true;
+        QuorumLib.CursorDrawing.Visible = false;
 
-    QuorumLib.CursorThread = task.spawn(function()
-        local ok, err = pcall(function()
-            while QuorumLib.MenuToggled and QuorumLib.UseCustomCursor and ScreenGui and ScreenGui.Parent do
-                if LastIconState ~= false then
-                    InputService.MouseIconEnabled = false;
-                    LastIconState = false
-                end
+        QuorumLib.CursorOutlineDrawing = Drawing.new('Triangle');
+        QuorumLib.CursorOutlineDrawing.Thickness = 1;
+        QuorumLib.CursorOutlineDrawing.Filled = false;
+        QuorumLib.CursorOutlineDrawing.Color = Color3.new(0, 0, 0);
+        QuorumLib.CursorOutlineDrawing.Visible = false;
 
-                if QuorumLib.UnlockCamera then
-                    local desired = nil
-                    local isFirstPerson = LocalPlayer.CameraMode == Enum.CameraMode.LockFirstPerson
-                    local isShiftLock = InputService.MouseBehavior == Enum.MouseBehavior.LockCenter
-                    if isFirstPerson or isShiftLock then
-                        desired = Enum.MouseBehavior.Default
+        QuorumLib.CursorThread = task.spawn(function()
+            local ok, err = pcall(function()
+                while QuorumLib.MenuToggled and QuorumLib.UseCustomCursor and ScreenGui and ScreenGui.Parent do
+                    if LastIconState ~= false then
+                        InputService.MouseIconEnabled = false;
+                        LastIconState = false
                     end
-                    if desired and LastMouseBehavior ~= desired then
-                        InputService.MouseBehavior = desired
-                        LastMouseBehavior = desired
+
+                    if QuorumLib.UnlockCamera then
+                        local desired = nil
+                        local isFirstPerson = LocalPlayer.CameraMode == Enum.CameraMode.LockFirstPerson
+                        local isShiftLock = InputService.MouseBehavior == Enum.MouseBehavior.LockCenter
+                        if isFirstPerson or isShiftLock then
+                            desired = Enum.MouseBehavior.Default
+                        end
+                        if desired and LastMouseBehavior ~= desired then
+                            InputService.MouseBehavior = desired
+                            LastMouseBehavior = desired
+                        end
                     end
+
+                    local mPos = InputService:GetMouseLocation();
+                    QuorumLib.CursorDrawing.Color = QuorumLib.AccentColor;
+                    QuorumLib.CursorDrawing.Visible = true;
+                    QuorumLib.CursorOutlineDrawing.Visible = true;
+
+                    QuorumLib.CursorDrawing.PointA = Vector2.new(mPos.X, mPos.Y);
+                    QuorumLib.CursorDrawing.PointB = Vector2.new(mPos.X + 16, mPos.Y + 6);
+                    QuorumLib.CursorDrawing.PointC = Vector2.new(mPos.X + 6, mPos.Y + 16);
+
+                    QuorumLib.CursorOutlineDrawing.PointA = QuorumLib.CursorDrawing.PointA;
+                    QuorumLib.CursorOutlineDrawing.PointB = QuorumLib.CursorDrawing.PointB;
+                    QuorumLib.CursorOutlineDrawing.PointC = QuorumLib.CursorDrawing.PointC;
+
+                    RunService.RenderStepped:Wait();
                 end
-
-                local mPos = InputService:GetMouseLocation();
-                QuorumLib.CursorDrawing.Color = QuorumLib.AccentColor;
-                QuorumLib.CursorDrawing.Visible = true;
-                QuorumLib.CursorOutlineDrawing.Visible = true;
-
-                QuorumLib.CursorDrawing.PointA = Vector2.new(mPos.X, mPos.Y);
-                QuorumLib.CursorDrawing.PointB = Vector2.new(mPos.X + 16, mPos.Y + 6);
-                QuorumLib.CursorDrawing.PointC = Vector2.new(mPos.X + 6, mPos.Y + 16);
-
-                QuorumLib.CursorOutlineDrawing.PointA = QuorumLib.CursorDrawing.PointA;
-                QuorumLib.CursorOutlineDrawing.PointB = QuorumLib.CursorDrawing.PointB;
-                QuorumLib.CursorOutlineDrawing.PointC = QuorumLib.CursorDrawing.PointC;
-
-                RunService.RenderStepped:Wait();
-            end
+            end)
+            task.defer(function()
+                InputService.MouseIconEnabled = InitialState;
+                if QuorumLib.CursorDrawing then pcall(function() QuorumLib.CursorDrawing.Visible = false; QuorumLib.CursorDrawing:Remove() end); QuorumLib.CursorDrawing = nil end
+                if QuorumLib.CursorOutlineDrawing then pcall(function() QuorumLib.CursorOutlineDrawing.Visible = false; QuorumLib.CursorOutlineDrawing:Remove() end); QuorumLib.CursorOutlineDrawing = nil end
+                QuorumLib.CursorThread = nil
+            end)
         end)
-        task.defer(function()
-            InputService.MouseIconEnabled = InitialState;
-            if QuorumLib.CursorDrawing then pcall(function() QuorumLib.CursorDrawing.Visible = false; QuorumLib.CursorDrawing:Remove() end); QuorumLib.CursorDrawing = nil end
-            if QuorumLib.CursorOutlineDrawing then pcall(function() QuorumLib.CursorOutlineDrawing.Visible = false; QuorumLib.CursorOutlineDrawing:Remove() end); QuorumLib.CursorOutlineDrawing = nil end
-            QuorumLib.CursorThread = nil
+    else
+        local CursorGui = Instance.new('ScreenGui')
+        CursorGui.Name = 'QuorumFallbackCursor'
+        CursorGui.IgnoreGuiInset = true
+        CursorGui.ResetOnSpawn = false
+        CursorGui.ZIndexBehavior = Enum.ZIndexBehavior.Global
+        CursorGui.Parent = CoreGui
+        ProtectGui(CursorGui)
+
+        local Cursor = Instance.new('ImageLabel')
+        Cursor.BackgroundTransparency = 1
+        Cursor.Image = 'rbxassetid://7114090487'
+        Cursor.ImageColor3 = QuorumLib.AccentColor
+        Cursor.Size = UDim2.fromOffset(20, 20)
+        Cursor.AnchorPoint = Vector2.new(0, 0)
+        Cursor.Parent = CursorGui
+
+        QuorumLib.FallbackCursor = Cursor
+        QuorumLib.FallbackCursorGui = CursorGui
+
+        local InitialState = InputService.MouseIconEnabled
+        QuorumLib.CursorThread = task.spawn(function()
+            local ok, err = pcall(function()
+                while QuorumLib.MenuToggled and QuorumLib.UseCustomCursor and ScreenGui and ScreenGui.Parent do
+                    InputService.MouseIconEnabled = false
+                    local mPos = InputService:GetMouseLocation()
+                    Cursor.Position = UDim2.fromOffset(mPos.X, mPos.Y)
+                    Cursor.ImageColor3 = QuorumLib.AccentColor
+                    RunService.RenderStepped:Wait()
+                end
+            end)
+            task.defer(function()
+                InputService.MouseIconEnabled = InitialState
+                if CursorGui and CursorGui.Parent then CursorGui:Destroy() end
+                QuorumLib.FallbackCursor = nil
+                QuorumLib.FallbackCursorGui = nil
+                QuorumLib.CursorThread = nil
+            end)
         end)
-    end)
+    end
 end
 
 function QuorumLib:SetCustomCursor(Enabled)
@@ -1403,17 +1574,17 @@ do
 			if not dirty then return end
 			_kpVisibleCache = { KeyPicker.Value .. tostring(State) .. tostring(KeyPicker.Mode) }
 
-			local YSize = 0
-			local XSize = 0
-			for _, Label in next, QuorumLib.KeybindContainer:GetChildren() do
-				if Label:IsA('TextLabel') and Label.Visible then
-					YSize = YSize + 18;
-					if (Label.TextBounds.X > XSize) then
-						XSize = Label.TextBounds.X
-					end
-				end
-			end;
-			QuorumLib.KeybindFrame.Size = UDim2.new(0, math.max(XSize + 10, 210), 0, YSize + 23)
+            local YSize = 0
+            local XSize = 0
+            local ItemCount = 0
+            for _, Label in next, QuorumLib.KeybindContainer:GetChildren() do
+                if Label:IsA('TextLabel') and Label.Visible then
+                    ItemCount = ItemCount + 1
+                    if Label.TextBounds.X > XSize then XSize = Label.TextBounds.X end
+                end
+            end
+            YSize = ItemCount * 18
+            QuorumLib.KeybindFrame.Size = UDim2.new(0, math.max(XSize + 10, 210), 0, YSize + 23 + 5)
 		end;
 
         function KeyPicker:GetState()
@@ -2895,6 +3066,7 @@ do
     });
 
     QuorumLib:Create('UIListLayout', {
+        Padding = UDim.new(0, 2);
         FillDirection = Enum.FillDirection.Vertical;
         SortOrder = Enum.SortOrder.LayoutOrder;
         Parent = KeybindContainer;
@@ -2902,6 +3074,8 @@ do
 
     QuorumLib:Create('UIPadding', {
         PaddingLeft = UDim.new(0, 5),
+        PaddingTop = UDim.new(0, 2),
+        PaddingBottom = UDim.new(0, 2),
         Parent = KeybindContainer,
     })
 
