@@ -1,4 +1,4 @@
-warn"Loadingg"
+warn"Loading"
 local _oldQrm = getgenv and getgenv().QuorumLib
 if _oldQrm and _oldQrm.Unload then
     pcall(function() _oldQrm:Unload() end)
@@ -19,130 +19,49 @@ local ProtectGui = protectgui or (syn and syn.protect_gui) or (function() end);
 
 local DrawingSupported = false
 do
-    local ok = pcall(function()
-        local d = Drawing.new('Square')
-        if d then
-            d.Visible = false
-            d:Remove()
+    local function tryDrawing()
+        if type(Drawing) ~= 'table' then return false end
+        if type(Drawing.new) ~= 'function' then return false end
+        local ok, obj = pcall(Drawing.new, 'Square')
+        if not ok or not obj then return false end
+        local checks = {
+            function() obj.Visible = true; return obj.Visible == true end,
+            function() obj.Color = Color3.fromRGB(255, 0, 0); return typeof(obj.Color) == 'Color3' and obj.Color.R == 1 end,
+            function() obj.Thickness = 3; return obj.Thickness == 3 end,
+            function() obj.Size = Vector2.new(10, 10); return typeof(obj.Size) == 'Vector2' and obj.Size.X == 10 end,
+            function() obj.Position = Vector2.new(100, 100); return typeof(obj.Position) == 'Vector2' and obj.Position.X == 100 end,
+            function() obj.Filled = true; return obj.Filled == true end,
+        }
+        for _, check in next, checks do
+            local okc, res = pcall(check)
+            if not okc or not res then
+                pcall(function() obj.Visible = false; obj:Remove() end)
+                return false
+            end
         end
-    end)
-    DrawingSupported = ok
-end
 
-if not DrawingSupported then
-    task.spawn(function()
-        local CoreGui = game:GetService('CoreGui')
-        local StarterGui = game:GetService('StarterGui')
-        local confirm
-        local done = false
-        local result = false
-        task.spawn(function()
-            local ok, err = pcall(function()
-                StarterGui:SetCore('SendNotification', {
-                    Title = 'Quorum UI',
-                    Text = 'Drawing library is missing / not implemented as it should be. Would you like to proceed?',
-                    Duration = 15,
-                    Icon = 'rbxassetid://0'
-                })
-            end)
+        local tri = Drawing.new('Triangle')
+        if not tri then
+            pcall(function() obj.Visible = false; obj:Remove() end)
+            return false
+        end
+        tri.Thickness = 1
+        tri.Filled = true
+        tri.Color = Color3.new(1, 1, 1)
+        tri.Visible = true
+        local frameOk = pcall(function()
+            game:GetService('RunService').RenderStepped:Wait()
         end)
-        local ok = pcall(function()
-            confirm = Instance.new('BindableEvent')
-            StarterGui:SetCore('SendNotification', {
-                Title = 'Quorum UI',
-                Text = 'Drawing library is missing / not implemented as it should be. Would you like to proceed?',
-                Duration = 15,
-                Icon = 'rbxassetid://0'
-            })
-        end)
+        pcall(function() tri.Visible = false; tri:Remove() end)
+        if not frameOk then
+            pcall(function() obj.Visible = false; obj:Remove() end)
+            return false
+        end
 
-        local function showPrompt()
-            local gui = Instance.new('ScreenGui')
-            gui.Name = 'QuorumDrawingPrompt'
-            gui.ResetOnSpawn = false
-            gui.Parent = CoreGui
-            local frame = Instance.new('Frame')
-            frame.Size = UDim2.fromOffset(360, 150)
-            frame.Position = UDim2.new(0.5, 0, 0.5, 0)
-            frame.AnchorPoint = Vector2.new(0.5, 0.5)
-            frame.BackgroundColor3 = Color3.fromRGB(26, 27, 38)
-            frame.BorderSizePixel = 0
-            frame.Parent = gui
-            local title = Instance.new('TextLabel')
-            title.Size = UDim2.new(1, -20, 0, 22)
-            title.Position = UDim2.fromOffset(10, 8)
-            title.BackgroundTransparency = 1
-            title.Font = Enum.Font.Code
-            title.TextSize = 15
-            title.TextColor3 = Color3.fromRGB(255, 255, 255)
-            title.TextXAlignment = Enum.TextXAlignment.Left
-            title.Text = 'Drawing library missing'
-            title.Parent = frame
-            local body = Instance.new('TextLabel')
-            body.Size = UDim2.new(1, -20, 0, 60)
-            body.Position = UDim2.fromOffset(10, 32)
-            body.BackgroundTransparency = 1
-            body.Font = Enum.Font.Code
-            body.TextSize = 13
-            body.TextWrapped = true
-            body.TextColor3 = Color3.fromRGB(190, 190, 190)
-            body.TextXAlignment = Enum.TextXAlignment.Left
-            body.TextYAlignment = Enum.TextYAlignment.Top
-            body.Text = 'Drawing library is missing / not implemented as it should be. Would you like to proceed?'
-            body.Parent = frame
-            local yes = Instance.new('TextButton')
-            yes.Size = UDim2.fromOffset(100, 28)
-            yes.Position = UDim2.new(1, -220, 1, -38)
-            yes.BackgroundColor3 = Color3.fromRGB(122, 162, 247)
-            yes.BorderSizePixel = 0
-            yes.Font = Enum.Font.Code
-            yes.TextSize = 14
-            yes.TextColor3 = Color3.fromRGB(22, 22, 30)
-            yes.Text = 'Proceed'
-            yes.Parent = frame
-            local no = Instance.new('TextButton')
-            no.Size = UDim2.fromOffset(100, 28)
-            no.Position = UDim2.new(1, -110, 1, -38)
-            no.BackgroundColor3 = Color3.fromRGB(41, 46, 66)
-            no.BorderSizePixel = 0
-            no.Font = Enum.Font.Code
-            no.TextSize = 14
-            no.TextColor3 = Color3.fromRGB(255, 255, 255)
-            no.Text = 'Cancel'
-            no.Parent = frame
-            yes.MouseButton1Click:Connect(function()
-                result = true
-                done = true
-                gui:Destroy()
-            end)
-            no.MouseButton1Click:Connect(function()
-                result = false
-                done = true
-                gui:Destroy()
-            end)
-        end
-        showPrompt()
-        while not done do task.wait(0.1) end
-        if result then
-            getgenv().QuorumDrawingFallback = true
-            local ok, err = pcall(function()
-                StarterGui:SetCore('SendNotification', {
-                    Title = 'Quorum UI',
-                    Text = 'Proceeding without Drawing.',
-                    Duration = 5,
-                })
-            end)
-        else
-            getgenv().QuorumDrawingFallback = false
-            local ok, err = pcall(function()
-                StarterGui:SetCore('SendNotification', {
-                    Title = 'Quorum UI',
-                    Text = 'Cancelled.',
-                    Duration = 5,
-                })
-            end)
-        end
-    end)
+        pcall(function() obj.Visible = false; obj:Remove() end)
+        return true
+    end
+    DrawingSupported = tryDrawing()
 end
 
 local IsTouchDevice = InputService.TouchEnabled and not InputService.KeyboardEnabled;
