@@ -1,4 +1,4 @@
-warn"nger"
+warn"Loading"
 local _oldQrm = getgenv and getgenv().QuorumLib
 if _oldQrm and _oldQrm.Unload then
     pcall(function() _oldQrm:Unload() end)
@@ -291,11 +291,14 @@ end
 local RainbowStep = 0
 local Hue = 0
 
+QuorumLib.CurrentRainbowHue = 0
+QuorumLib.CurrentRainbowColor = Color3.fromHSV(0, 0.8, 1)
+
 table.insert(QuorumLib.Signals, RenderStepped:Connect(function(Delta)
     RainbowStep = RainbowStep + Delta
-    if RainbowStep >= (1 / 60) then
+    if RainbowStep >= 0.25 then
         RainbowStep = 0
-        Hue = Hue + (1 / 400);
+        Hue = Hue + (Delta / 4);
         if Hue > 1 then Hue = 0; end;
         QuorumLib.CurrentRainbowHue = Hue;
         QuorumLib.CurrentRainbowColor = Color3.fromHSV(Hue, 0.8, 1);
@@ -554,16 +557,22 @@ function QuorumLib:RemoveFromRegistry(Instance)
     end;
 end;
 
+local _pendingRegistryUpdate = false
 function QuorumLib:UpdateColorsUsingRegistry()
-    for Idx, Object in next, QuorumLib.Registry do
-        for Property, ColorIdx in next, Object.Properties do
-            if type(ColorIdx) == 'string' then
-                Object.Instance[Property] = QuorumLib[ColorIdx];
-            elseif type(ColorIdx) == 'function' then
-                Object.Instance[Property] = ColorIdx()
-            end
+    if _pendingRegistryUpdate then return end
+    _pendingRegistryUpdate = true
+    task.defer(function()
+        _pendingRegistryUpdate = false
+        for Idx, Object in next, QuorumLib.Registry do
+            for Property, ColorIdx in next, Object.Properties do
+                if type(ColorIdx) == 'string' then
+                    Object.Instance[Property] = QuorumLib[ColorIdx];
+                elseif type(ColorIdx) == 'function' then
+                    Object.Instance[Property] = ColorIdx()
+                end
+            end;
         end;
-    end;
+    end)
 end;
 
 function QuorumLib:GiveSignal(Signal)
@@ -575,12 +584,14 @@ local function SpawnCustomCursor()
     if IsTouchDevice then return end
 
     local InitialState = InputService.MouseIconEnabled;
-    
+    local LastIconState = InitialState
+    local LastMouseBehavior = nil
+
     QuorumLib.CursorDrawing = Drawing.new('Triangle');
     QuorumLib.CursorDrawing.Thickness = 1;
     QuorumLib.CursorDrawing.Filled = true;
     QuorumLib.CursorDrawing.Visible = false;
-    
+
     QuorumLib.CursorOutlineDrawing = Drawing.new('Triangle');
     QuorumLib.CursorOutlineDrawing.Thickness = 1;
     QuorumLib.CursorOutlineDrawing.Filled = false;
@@ -588,39 +599,48 @@ local function SpawnCustomCursor()
     QuorumLib.CursorOutlineDrawing.Visible = false;
 
     QuorumLib.CursorThread = task.spawn(function()
-        while QuorumLib.MenuToggled and QuorumLib.UseCustomCursor and ScreenGui.Parent do
-            InputService.MouseIconEnabled = false;
-            
-            if QuorumLib.UnlockCamera then
-                local isFirstPerson = LocalPlayer.CameraMode == Enum.CameraMode.LockFirstPerson
-                local isShiftLock = InputService.MouseBehavior == Enum.MouseBehavior.LockCenter
-                
-                if isFirstPerson or isShiftLock then
-                    InputService.MouseBehavior = Enum.MouseBehavior.Default
+        local ok, err = pcall(function()
+            while QuorumLib.MenuToggled and QuorumLib.UseCustomCursor and ScreenGui and ScreenGui.Parent do
+                if LastIconState ~= false then
+                    InputService.MouseIconEnabled = false;
+                    LastIconState = false
                 end
+
+                if QuorumLib.UnlockCamera then
+                    local desired = nil
+                    local isFirstPerson = LocalPlayer.CameraMode == Enum.CameraMode.LockFirstPerson
+                    local isShiftLock = InputService.MouseBehavior == Enum.MouseBehavior.LockCenter
+                    if isFirstPerson or isShiftLock then
+                        desired = Enum.MouseBehavior.Default
+                    end
+                    if desired and LastMouseBehavior ~= desired then
+                        InputService.MouseBehavior = desired
+                        LastMouseBehavior = desired
+                    end
+                end
+
+                local mPos = InputService:GetMouseLocation();
+                QuorumLib.CursorDrawing.Color = QuorumLib.AccentColor;
+                QuorumLib.CursorDrawing.Visible = true;
+                QuorumLib.CursorOutlineDrawing.Visible = true;
+
+                QuorumLib.CursorDrawing.PointA = Vector2.new(mPos.X, mPos.Y);
+                QuorumLib.CursorDrawing.PointB = Vector2.new(mPos.X + 16, mPos.Y + 6);
+                QuorumLib.CursorDrawing.PointC = Vector2.new(mPos.X + 6, mPos.Y + 16);
+
+                QuorumLib.CursorOutlineDrawing.PointA = QuorumLib.CursorDrawing.PointA;
+                QuorumLib.CursorOutlineDrawing.PointB = QuorumLib.CursorDrawing.PointB;
+                QuorumLib.CursorOutlineDrawing.PointC = QuorumLib.CursorDrawing.PointC;
+
+                RunService.RenderStepped:Wait();
             end
-            
-            local mPos = InputService:GetMouseLocation();
-            QuorumLib.CursorDrawing.Color = QuorumLib.AccentColor;
-            QuorumLib.CursorDrawing.Visible = true;
-            QuorumLib.CursorOutlineDrawing.Visible = true;
-            
-            QuorumLib.CursorDrawing.PointA = Vector2.new(mPos.X, mPos.Y);
-            QuorumLib.CursorDrawing.PointB = Vector2.new(mPos.X + 16, mPos.Y + 6);
-            QuorumLib.CursorDrawing.PointC = Vector2.new(mPos.X + 6, mPos.Y + 16);
-            
-            QuorumLib.CursorOutlineDrawing.PointA = QuorumLib.CursorDrawing.PointA;
-            QuorumLib.CursorOutlineDrawing.PointB = QuorumLib.CursorDrawing.PointB;
-            QuorumLib.CursorOutlineDrawing.PointC = QuorumLib.CursorDrawing.PointC;
-            
-            RunService.RenderStepped:Wait();
-        end
-        
-        InputService.MouseIconEnabled = InitialState;
-        if QuorumLib.CursorDrawing then QuorumLib.CursorDrawing.Visible = false; QuorumLib.CursorDrawing:Remove(); QuorumLib.CursorDrawing = nil; end
-        if QuorumLib.CursorOutlineDrawing then QuorumLib.CursorOutlineDrawing.Visible = false; QuorumLib.CursorOutlineDrawing:Remove(); QuorumLib.CursorOutlineDrawing = nil; end
-        
-        QuorumLib.CursorThread = nil
+        end)
+        task.defer(function()
+            InputService.MouseIconEnabled = InitialState;
+            if QuorumLib.CursorDrawing then pcall(function() QuorumLib.CursorDrawing.Visible = false; QuorumLib.CursorDrawing:Remove() end); QuorumLib.CursorDrawing = nil end
+            if QuorumLib.CursorOutlineDrawing then pcall(function() QuorumLib.CursorOutlineDrawing.Visible = false; QuorumLib.CursorOutlineDrawing:Remove() end); QuorumLib.CursorOutlineDrawing = nil end
+            QuorumLib.CursorThread = nil
+        end)
     end)
 end
 
@@ -1367,26 +1387,34 @@ do
             ModeButtons[Mode] = ModeButton;
         end;
 
-        function KeyPicker:Update()
-            if Info.NoUI then return; end;
-            local State = KeyPicker:GetState();
-            ContainerLabel.Text = string.format('[%s] %s (%s)', KeyPicker.Value, Info.Text, KeyPicker.Mode);
-            ContainerLabel.Visible = true;
-            ContainerLabel.TextColor3 = State and QuorumLib.AccentColor or QuorumLib.FontColor;
-            QuorumLib.RegistryMap[ContainerLabel].Properties.TextColor3 = State and 'AccentColor' or 'FontColor';
+		local _kpVisibleCache = {}
+		function KeyPicker:Update()
+			if Info.NoUI then return; end;
+			local State = KeyPicker:GetState();
+			ContainerLabel.Text = string.format('[%s] %s (%s)', KeyPicker.Value, Info.Text, KeyPicker.Mode);
+			ContainerLabel.Visible = true;
+			ContainerLabel.TextColor3 = State and QuorumLib.AccentColor or QuorumLib.FontColor;
+			QuorumLib.RegistryMap[ContainerLabel].Properties.TextColor3 = State and 'AccentColor' or 'FontColor';
 
-            local YSize = 0
-            local XSize = 0
-            for _, Label in next, QuorumLib.KeybindContainer:GetChildren() do
-                if Label:IsA('TextLabel') and Label.Visible then
-                    YSize = YSize + 18;
-                    if (Label.TextBounds.X > XSize) then
-                        XSize = Label.TextBounds.X
-                    end
-                end
-            end;
-            QuorumLib.KeybindFrame.Size = UDim2.new(0, math.max(XSize + 10, 210), 0, YSize + 23)
-        end;
+			local dirty = false
+			for i = 1, #_kpVisibleCache do
+				if _kpVisibleCache[i] ~= KeyPicker.Value .. tostring(State) .. tostring(KeyPicker.Mode) then dirty = true; break; end
+			end
+			if not dirty then return end
+			_kpVisibleCache = { KeyPicker.Value .. tostring(State) .. tostring(KeyPicker.Mode) }
+
+			local YSize = 0
+			local XSize = 0
+			for _, Label in next, QuorumLib.KeybindContainer:GetChildren() do
+				if Label:IsA('TextLabel') and Label.Visible then
+					YSize = YSize + 18;
+					if (Label.TextBounds.X > XSize) then
+						XSize = Label.TextBounds.X
+					end
+				end
+			end;
+			QuorumLib.KeybindFrame.Size = UDim2.new(0, math.max(XSize + 10, 210), 0, YSize + 23)
+		end;
 
         function KeyPicker:GetState()
             if KeyPicker.Mode == 'Always' then
@@ -2969,14 +2997,23 @@ function QuorumLib:Notify(Text, Time, Position)
 
     QuorumLib:AddToRegistry(LeftColor, { BackgroundColor3 = 'AccentColor'; }, true);
 
-    pcall(NotifyOuter.TweenSize, NotifyOuter, UDim2.new(0, XSize + 8 + 4, 0, YSize), 'Out', 'Quad', 0.4, true);
+    pcall(function()
+        TweenService:Create(NotifyOuter, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+            Size = UDim2.new(0, XSize + 8 + 4, 0, YSize)
+        }):Play()
+    end)
 
-    task.spawn(function()
-        wait(Time or 5);
-        pcall(NotifyOuter.TweenSize, NotifyOuter, UDim2.new(0, 0, 0, YSize), 'Out', 'Quad', 0.4, true);
-        wait(0.4);
-        NotifyOuter:Destroy();
-    end);
+    task.delay(Time or 5, function()
+        if not NotifyOuter or not NotifyOuter.Parent then return end
+        pcall(function()
+            TweenService:Create(NotifyOuter, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                Size = UDim2.new(0, 0, 0, YSize)
+            }):Play()
+        end)
+        task.delay(0.4, function()
+            if NotifyOuter and NotifyOuter.Parent then NotifyOuter:Destroy() end
+        end)
+    end)
 end;
 
 function QuorumLib:CreateWindow(...)
@@ -3584,52 +3621,60 @@ function QuorumLib:CreateWindow(...)
     local TransparencyCache = {};
     local Fading = false;
 
+    local function BuildTransparencyCache()
+        TransparencyCache = {}
+        for _, Desc in next, Outer:GetDescendants() do
+            local Props = {}
+            if Desc:IsA('ImageLabel') then
+                Props = {'ImageTransparency', 'BackgroundTransparency'}
+            elseif Desc:IsA('TextLabel') or Desc:IsA('TextBox') then
+                Props = {'TextTransparency'}
+            elseif Desc:IsA('Frame') or Desc:IsA('ScrollingFrame') then
+                Props = {'BackgroundTransparency'}
+            elseif Desc:IsA('UIStroke') then
+                Props = {'Transparency'}
+            end
+            if #Props > 0 then
+                local Cache = {}
+                for _, Prop in next, Props do Cache[Prop] = Desc[Prop] end
+                TransparencyCache[Desc] = Cache
+            end
+        end
+    end
+
     function QuorumLib:Toggle()
         if Fading then return; end;
-
-        local FadeTime = Config.MenuFadeTime;
-        Fading = true;
-        QuorumLib.MenuToggled = (not QuorumLib.MenuToggled);
-        ModalElement.Modal = QuorumLib.MenuToggled;
+        Fading = true
+        QuorumLib.MenuToggled = (not QuorumLib.MenuToggled)
+        ModalElement.Modal = QuorumLib.MenuToggled
 
         if QuorumLib.MenuToggled then
-            Outer.Visible = true;
-            if QuorumLib.UseCustomCursor then SpawnCustomCursor() end;
+            BuildTransparencyCache()
+            Outer.Visible = true
+            if QuorumLib.UseCustomCursor then SpawnCustomCursor() end
         else
             if not IsTouchDevice then
                 InputService.MouseBehavior = Enum.MouseBehavior.Default
             end
-        end;
+        end
 
-        for _, Desc in next, Outer:GetDescendants() do
-            local Properties = {};
-            if Desc:IsA('ImageLabel') then
-                table.insert(Properties, 'ImageTransparency');
-                table.insert(Properties, 'BackgroundTransparency');
-            elseif Desc:IsA('TextLabel') or Desc:IsA('TextBox') then
-                table.insert(Properties, 'TextTransparency');
-            elseif Desc:IsA('Frame') or Desc:IsA('ScrollingFrame') then
-                table.insert(Properties, 'BackgroundTransparency');
-            elseif Desc:IsA('UIStroke') then
-                table.insert(Properties, 'Transparency');
-            end;
+        local FadeTime = Config.MenuFadeTime
+        for Desc, Cache in next, TransparencyCache do
+            if Desc.Parent then
+                for Prop, Orig in next, Cache do
+                    if Orig ~= 1 then
+                        TweenService:Create(Desc, TweenInfo.new(FadeTime, Enum.EasingStyle.Linear), {
+                            [Prop] = QuorumLib.MenuToggled and Orig or 1
+                        }):Play()
+                    end
+                end
+            end
+        end
 
-            local Cache = TransparencyCache[Desc];
-            if (not Cache) then
-                Cache = {};
-                TransparencyCache[Desc] = Cache;
-            end;
-
-            for _, Prop in next, Properties do
-                if not Cache[Prop] then Cache[Prop] = Desc[Prop]; end;
-                if Cache[Prop] == 1 then continue; end;
-                TweenService:Create(Desc, TweenInfo.new(FadeTime, Enum.EasingStyle.Linear), { [Prop] = QuorumLib.MenuToggled and Cache[Prop] or 1 }):Play();
-            end;
-        end;
-
-        task.wait(FadeTime);
-        Outer.Visible = QuorumLib.MenuToggled;
-        Fading = false;
+        task.delay(FadeTime, function()
+            Outer.Visible = QuorumLib.MenuToggled
+            Fading = false
+        end)
     end
 
     QuorumLib:GiveSignal(InputService.InputBegan:Connect(function(Input, Processed)
@@ -3678,8 +3723,8 @@ local function OnPlayerChange()
     end;
 end;
 
-Players.PlayerAdded:Connect(OnPlayerChange);
-Players.PlayerRemoving:Connect(OnPlayerChange);
+QuorumLib:GiveSignal(Players.PlayerAdded:Connect(OnPlayerChange));
+QuorumLib:GiveSignal(Players.PlayerRemoving:Connect(OnPlayerChange));
 
 getgenv().QuorumLib = QuorumLib
 return QuorumLib
